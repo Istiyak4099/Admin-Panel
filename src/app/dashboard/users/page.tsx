@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -19,17 +22,41 @@ import { users } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { CreateUserForm } from "@/components/create-user-form";
 
 export default function UsersPage() {
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="User Accounts">
-        <Button size="sm" className="gap-1">
-          <PlusCircle className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            Create User
-          </span>
-        </Button>
+        <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-1">
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Create User
+              </span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create a new user</DialogTitle>
+              <DialogDescription>
+                Fill out the form below to add a new user to the system. The user will not be persisted.
+              </DialogDescription>
+            </DialogHeader>
+            <CreateUserForm onSuccess={() => setIsCreateUserOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </DashboardHeader>
       <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
         <Card>
