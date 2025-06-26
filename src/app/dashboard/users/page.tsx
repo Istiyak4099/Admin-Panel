@@ -27,8 +27,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { CreateUserForm } from "@/components/create-user-form";
 
@@ -51,7 +51,7 @@ export default function UsersPage() {
             <DialogHeader>
               <DialogTitle>Create a new user</DialogTitle>
               <DialogDescription>
-                Fill out the form below to add a new user to the system. The user will not be persisted.
+                Fill out the form below to add a new user. Credentials will be logged and not persisted in Firestore.
               </DialogDescription>
             </DialogHeader>
             <CreateUserForm onSuccess={() => setIsCreateUserOpen(false)} />
@@ -72,9 +72,9 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>User ID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Mobile Number</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Locker Assigned</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Created At</TableHead>
                    <TableHead>
                     <span className="sr-only">Actions</span>
@@ -86,11 +86,13 @@ export default function UsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.id}</TableCell>
                     <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.mobile_number}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{user.role}</Badge>
                     </TableCell>
-                    <TableCell>{user.lockerId || "None"}</TableCell>
+                     <TableCell>
+                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="capitalize">{user.status}</Badge>
+                    </TableCell>
                     <TableCell>{user.createdAt}</TableCell>
                      <TableCell>
                       <DropdownMenu>

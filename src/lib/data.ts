@@ -9,13 +9,18 @@ export const lockers: Locker[] = [
   { id: "LKR-006", location: "Sector C, Row 3", status: "occupied", userId: "USR-003", lastMaintenance: "2024-07-01" },
 ];
 
+// NOTE: Passwords are mock-hashed for "password123". In a real application,
+// these would be generated uniquely for each user upon creation.
+const mockPasswordHash = "$2a$10$8.UnAmnsP3uI1I5IeG/a9.wGikp9A9bJjA.PfTjC8zHIOIDx3F7c6";
+
 export const users: User[] = [
-  { id: "USR-001", name: "Alice Johnson", email: "alice@example.com", role: "Retailer", createdAt: "2024-01-15", lockerId: "LKR-001" },
-  { id: "USR-002", name: "Bob Williams", email: "bob@example.com", role: "Distributor", createdAt: "2024-02-20", lockerId: "LKR-004" },
-  { id: "USR-003", name: "Charlie Brown", email: "charlie@example.com", role: "Retailer", createdAt: "2024-03-10", lockerId: "LKR-006" },
-  { id: "USR-004", name: "Diana Miller", email: "diana@example.com", role: "Admin", createdAt: "2023-12-01", lockerId: null },
-  { id: "USR-005", name: "Ethan Davis", email: "ethan@example.com", role: "Super Distributor", createdAt: "2024-04-05", lockerId: null },
+  { id: "USR-001", name: "Alice Johnson", mobile_number: "1112223331", password: mockPasswordHash, role: "Retailer", createdAt: "2024-01-15", lockerId: "LKR-001", parentId: "USR-002", status: "active" },
+  { id: "USR-002", name: "Bob Williams", mobile_number: "1112223332", password: mockPasswordHash, role: "Distributor", createdAt: "2024-02-20", lockerId: "LKR-004", parentId: "USR-005", status: "active" },
+  { id: "USR-003", name: "Charlie Brown", mobile_number: "1112223333", password: mockPasswordHash, role: "Retailer", createdAt: "2024-03-10", lockerId: "LKR-006", parentId: "USR-002", status: "inactive" },
+  { id: "USR-004", name: "Diana Miller", mobile_number: "1112223334", password: mockPasswordHash, role: "Admin", createdAt: "2023-12-01", lockerId: null, parentId: null, status: "active" },
+  { id: "USR-005", name: "Ethan Davis", mobile_number: "1112223335", password: mockPasswordHash, role: "Super Distributor", createdAt: "2024-04-05", lockerId: null, parentId: "USR-004", status: "active" },
 ];
+
 
 export const payments: Payment[] = [
   { id: "PAY-001", userId: "USR-001", lockerId: "LKR-001", amount: 25.00, date: "2024-07-01", status: "paid" },

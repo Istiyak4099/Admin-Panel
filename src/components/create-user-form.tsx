@@ -23,14 +23,15 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { UserRole } from '@/lib/types';
 import { createUserAction } from '@/app/users/actions';
-import { useTransition } from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { useTransition, useState } from 'react';
+import { LoaderCircle, Eye, EyeOff } from 'lucide-react';
 
 const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email.' }),
+  mobile_number: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
 });
 
@@ -43,12 +44,14 @@ interface CreateUserFormProps {
 export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
       name: '',
-      email: '',
+      mobile_number: '',
+      password: '',
       role: 'Retailer',
     },
   });
@@ -92,12 +95,41 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
         />
         <FormField
           control={form.control}
-          name="email"
+          name="mobile_number"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Mobile Number</FormLabel>
               <FormControl>
-                <Input placeholder="john.doe@example.com" {...field} />
+                <Input placeholder="123-456-7890" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+               <FormControl>
+                <div className="relative">
+                  <Input 
+                    type={showPassword ? 'text' : 'password'} 
+                    placeholder="••••••" 
+                    {...field} 
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
