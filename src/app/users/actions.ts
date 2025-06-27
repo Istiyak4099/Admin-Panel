@@ -3,22 +3,20 @@
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import bcrypt from 'bcryptjs';
-
-// In a real app, you would import and use your firestore instance
-// to check for existing mobile numbers and save the new user.
-// import { firestore } from '@/lib/firebase-admin';
+import { firestore } from '@/lib/firebase-admin';
+import admin from 'firebase-admin';
 
 const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  mobile_number: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
+  mobileNumber: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
 });
 
 export interface CreateUserState {
-  user?: Omit<User, 'password'>; // Don't send password hash back to client
+  user?: Omit<User, 'hashedPassword'>;
   error?: string | null;
 }
 
@@ -29,7 +27,6 @@ export async function createUserAction(
 
   if (!validatedFields.success) {
     const errors = validatedFields.error.flatten().fieldErrors;
-    // Return the first error message
     const firstError = Object.values(errors).flat()[0];
     return {
       error: firstError || 'Invalid input.',
@@ -37,35 +34,47 @@ export async function createUserAction(
   }
 
   try {
-    const { name, mobile_number, password, role } = validatedFields.data;
+    const { name, mobileNumber, password, role } = validatedFields.data;
 
-    // Hash the password
+    const usersRef = firestore.collection('users');
+    const existingUserSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+    if (!existingUserSnapshot.empty) {
+      return { error: 'A user with this mobile number already exists.' };
+    }
+    
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create a user in Firebase Auth. The UID will be our single source of truth.
+    const userRecord = await admin.auth().createUser({
+      displayName: name,
+      // You can add more properties here, like a verified email if you collect it.
+    });
+    const uid = userRecord.uid;
+
     const newUser: User = {
-      // NOTE: This is not a production-ready way to generate IDs.
-      id: `USR-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+      uid,
       name,
-      mobile_number,
-      password: hashedPassword,
+      mobileNumber,
+      hashedPassword,
       role,
-      createdAt: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD format
-      status: 'active', // Default to active for new users
-      parentId: 'admin-user-id', // In a real app, you would get the current logged-in user's ID here
+      createdAt: new Date().toISOString(),
+      status: 'active',
+      createdByUid: 'admin-user-id', // Placeholder for the currently logged-in admin's UID
       lockerId: null,
     };
 
-    // In a real app, you would save this to a database like Firestore.
-    // e.g., await firestore.collection('users').doc(newUser.id).set(newUser);
-    // For this demo, the new user will not persist in the table displayed on the page.
-    console.log('New user created (this would be saved to Firestore):', newUser);
+    // Save the full user profile to the 'users' collection in Firestore
+    await usersRef.doc(uid).set(newUser);
+
+    console.log('New user created in Auth and Firestore:', { uid: newUser.uid, name: newUser.name });
 
     // Don't send the password hash back to the client.
-    const { password: _, ...userToReturn } = newUser;
+    const { hashedPassword: _, ...userToReturn } = newUser;
 
     return { user: userToReturn };
-  } catch (e) {
-    console.error(e);
-    return { error: 'An unexpected error occurred. Please try again.' };
+  } catch (e: any) {
+    console.error('Create User Action Error:', e);
+    // In a production app, you might want to clean up the created Auth user if the Firestore write fails.
+    return { error: e.message || 'An unexpected error occurred. Please try again.' };
   }
 }

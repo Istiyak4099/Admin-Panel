@@ -30,7 +30,7 @@ const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Ret
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  mobile_number: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
+  mobileNumber: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
 });
@@ -50,7 +50,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
       name: '',
-      mobile_number: '',
+      mobileNumber: '',
       password: '',
       role: 'Retailer',
     },
@@ -69,7 +69,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       } else {
         toast({
           title: 'User created successfully',
-          description: `User ${result.user?.name} has been created. Note: The user list will not update as this is a demo.`,
+          description: `User ${result.user?.name} has been created in Firestore.`,
         });
         onSuccess();
         form.reset();
@@ -95,12 +95,12 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
         />
         <FormField
           control={form.control}
-          name="mobile_number"
+          name="mobileNumber"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mobile Number</FormLabel>
               <FormControl>
-                <Input placeholder="123-456-7890" {...field} />
+                <Input placeholder="1234567890" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

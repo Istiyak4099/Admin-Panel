@@ -51,7 +51,7 @@ export default function UsersPage() {
             <DialogHeader>
               <DialogTitle>Create a new user</DialogTitle>
               <DialogDescription>
-                Fill out the form below to add a new user. Credentials will be logged and not persisted in Firestore.
+                Fill out the form to add a new user to Firebase Auth and Firestore.
               </DialogDescription>
             </DialogHeader>
             <CreateUserForm onSuccess={() => setIsCreateUserOpen(false)} />
@@ -63,14 +63,14 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Manage user accounts and assign lockers to users.
+              Manage user accounts and assign lockers to users. (Showing mock data).
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>User ID (UID)</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile Number</TableHead>
                   <TableHead>Role</TableHead>
@@ -83,10 +83,10 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
+                  <TableRow key={user.uid}>
+                    <TableCell className="font-medium">{user.uid}</TableCell>
                     <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.mobile_number}</TableCell>
+                    <TableCell>{user.mobileNumber}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{user.role}</Badge>
                     </TableCell>

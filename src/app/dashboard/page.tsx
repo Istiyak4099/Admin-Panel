@@ -81,16 +81,16 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Mobile Number</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Joined On</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.uid}>
                     <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.mobileNumber}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{user.role}</Badge>
                     </TableCell>

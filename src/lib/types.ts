@@ -12,14 +12,14 @@ export type Locker = {
 };
 
 export type User = {
-  id: string;
+  uid: string;
   name: string;
-  mobile_number: string;
-  password?: string; // Hashed password, should not be sent to client
+  mobileNumber: string;
+  hashedPassword?: string;
   role: UserRole;
   createdAt: string;
   lockerId: string | null;
-  parentId: string | null; // ID of the creating user
+  createdByUid: string | null;
   status: UserStatus;
 };
 
@@ -33,7 +33,7 @@ export type Payment = {
 };
 
 export type Device = {
-  id: string;
+  id:string;
   code: string;
   assignedTo: string;
   status: "generated" | "transferred" | "returned";
