@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate a custom token for the user to sign in with on the client.
-    const customToken = await admin.auth().createCustomToken(userData.uid);
+    const token = await admin.auth().createCustomToken(userData.uid);
 
-    return NextResponse.json({ customToken });
+    return NextResponse.json({ customToken: token });
 
   } catch (error) {
     console.error('Login API error:', error);
