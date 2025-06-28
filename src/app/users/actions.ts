@@ -13,6 +13,7 @@ const CreateUserSchema = z.object({
   mobileNumber: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
+  live_photo_url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 export interface CreateUserState {
@@ -34,7 +35,7 @@ export async function createUserAction(
   }
 
   try {
-    const { name, mobileNumber, password, role } = validatedFields.data;
+    const { name, mobileNumber, password, role, live_photo_url } = validatedFields.data;
 
     const usersRef = firestore.collection('users');
     const existingUserSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
@@ -47,6 +48,7 @@ export async function createUserAction(
     // Create a user in Firebase Auth. The UID will be our single source of truth.
     const userRecord = await admin.auth().createUser({
       displayName: name,
+      photoURL: live_photo_url || undefined,
       // You can add more properties here, like a verified email if you collect it.
     });
     const uid = userRecord.uid;
@@ -61,6 +63,7 @@ export async function createUserAction(
       status: 'active',
       createdByUid: 'admin-user-id', // Placeholder for the currently logged-in admin's UID
       lockerId: null,
+      live_photo_url: live_photo_url || null,
     };
 
     // Save the full user profile to the 'users' collection in Firestore

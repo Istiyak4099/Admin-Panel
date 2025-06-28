@@ -21,6 +21,7 @@ export type User = {
   lockerId: string | null;
   createdByUid: string | null;
   status: UserStatus;
+  live_photo_url: string | null;
 };
 
 export type Payment = {

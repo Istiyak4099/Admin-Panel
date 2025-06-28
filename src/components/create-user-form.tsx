@@ -31,6 +31,7 @@ const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Ret
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   mobileNumber: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
+  live_photo_url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
 });
@@ -53,6 +54,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       mobileNumber: '',
       password: '',
       role: 'Retailer',
+      live_photo_url: '',
     },
   });
 
@@ -101,6 +103,19 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
               <FormLabel>Mobile Number</FormLabel>
               <FormControl>
                 <Input placeholder="1234567890" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="live_photo_url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Live Photo URL (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="https://example.com/photo.jpg" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
