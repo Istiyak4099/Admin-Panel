@@ -8,15 +8,12 @@ export function DomainHelper() {
     const [domain, setDomain] = useState<string | null>(null);
 
     useEffect(() => {
+        // This code runs only on the client, so `window` is available.
         setDomain(window.location.hostname);
     }, []);
 
-    if (!domain) {
-        return null;
-    }
-    
-    // Only show this helper in development environments.
-    if (process.env.NODE_ENV === 'production' && domain !== 'localhost') {
+    // Don't show the helper if we can't determine the domain or if it's localhost (which is often authorized by default).
+    if (!domain || domain === 'localhost') {
         return null;
     }
     
