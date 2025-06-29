@@ -20,10 +20,12 @@ if (!admin.apps.length) {
     });
     console.log("Firebase Admin SDK initialized successfully.");
   } catch (error) {
-    console.error('Firebase admin initialization error:', (error as Error).message);
     if (process.env.NODE_ENV !== 'production' && (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY)) {
-        console.warn("One or more Firebase environment variables are missing. Please check your .env file.");
+        // Re-throw a more helpful error to stop execution and guide the user.
+        throw new Error("Firebase Admin SDK failed to initialize. Please make sure that FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are correctly set in your .env file.");
     }
+    // Re-throw original error if it's not a config issue
+    throw error;
   }
 }
 
