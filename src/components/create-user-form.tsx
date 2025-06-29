@@ -30,8 +30,11 @@ const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Ret
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  email: z.string().email({ message: "Please enter a valid email." }),
   mobileNumber: z.string().min(10, { message: 'Please enter a valid mobile number.' }),
-  live_photo_url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  shopName: z.string().min(2, { message: 'Shop Name is required.' }),
+  address: z.string().min(5, { message: 'Address is required.' }),
+  dealerCode: z.string().min(1, { message: 'Dealer Code is required.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
 });
@@ -51,10 +54,13 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
       name: '',
+      email: '',
       mobileNumber: '',
       password: '',
       role: 'Retailer',
-      live_photo_url: '',
+      shopName: '',
+      address: '',
+      dealerCode: '',
     },
   });
 
@@ -97,6 +103,19 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
         />
         <FormField
           control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="john.doe@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="mobileNumber"
           render={({ field }) => (
             <FormItem>
@@ -110,12 +129,38 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
         />
         <FormField
           control={form.control}
-          name="live_photo_url"
+          name="shopName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Live Photo URL (Optional)</FormLabel>
+              <FormLabel>Shop Name</FormLabel>
               <FormControl>
-                <Input placeholder="https://example.com/photo.jpg" {...field} />
+                <Input placeholder="The Corner Shop" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Address</FormLabel>
+              <FormControl>
+                <Input placeholder="123 Main Street, Anytown" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="dealerCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dealer Code</FormLabel>
+              <FormControl>
+                <Input placeholder="DEAL-456" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

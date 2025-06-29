@@ -14,6 +14,7 @@ export type Locker = {
 export type User = {
   uid: string;
   name: string;
+  email: string;
   mobileNumber: string;
   hashedPassword?: string;
   role: UserRole;
@@ -21,7 +22,9 @@ export type User = {
   lockerId: string | null;
   createdByUid: string | null;
   status: UserStatus;
-  live_photo_url: string | null;
+  address: string;
+  shopName: string;
+  dealerCode: string;
 };
 
 export type Payment = {

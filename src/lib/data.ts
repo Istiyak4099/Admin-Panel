@@ -12,11 +12,11 @@ export const lockers: Locker[] = [
 const mockPasswordHash = "$2a$10$8.UnAmnsP3uI1I5IeG/a9.wGikp9A9bJjA.PfTjC8zHIOIDx3F7c6";
 
 export const users: User[] = [
-  { uid: "USR-001", name: "Alice Johnson", mobileNumber: "1112223331", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-01-15", lockerId: "LKR-001", createdByUid: "USR-002", status: "active" },
-  { uid: "USR-002", name: "Bob Williams", mobileNumber: "1112223332", hashedPassword: mockPasswordHash, role: "Distributor", createdAt: "2024-02-20", lockerId: "LKR-004", createdByUid: "USR-005", status: "active" },
-  { uid: "USR-003", name: "Charlie Brown", mobileNumber: "1112223333", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-03-10", lockerId: "LKR-006", createdByUid: "USR-002", status: "inactive" },
-  { uid: "USR-004", name: "Diana Miller", mobileNumber: "1112223334", hashedPassword: mockPasswordHash, role: "Admin", createdAt: "2023-12-01", lockerId: null, createdByUid: null, status: "active" },
-  { uid: "USR-005", name: "Ethan Davis", mobileNumber: "1112223335", hashedPassword: mockPasswordHash, role: "Super Distributor", createdAt: "2024-04-05", lockerId: null, createdByUid: "USR-004", status: "active" },
+  { uid: "USR-001", name: "Alice Johnson", email: "alice@retailer.com", mobileNumber: "1112223331", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-01-15", lockerId: "LKR-001", createdByUid: "USR-002", status: "active", address: "123 Retail Row", shopName: "Alice's Emporium", dealerCode: "DLR-A1" },
+  { uid: "USR-002", name: "Bob Williams", email: "bob@distributor.com", mobileNumber: "1112223332", hashedPassword: mockPasswordHash, role: "Distributor", createdAt: "2024-02-20", lockerId: "LKR-004", createdByUid: "USR-005", status: "active", address: "456 Distributor Drive", shopName: "Bob's Bargains", dealerCode: "DLR-B2" },
+  { uid: "USR-003", name: "Charlie Brown", email: "charlie@retailer.com", mobileNumber: "1112223333", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-03-10", lockerId: "LKR-006", createdByUid: "USR-002", status: "inactive", address: "789 Market Street", shopName: "Charlie's Corner", dealerCode: "DLR-C3" },
+  { uid: "USR-004", name: "Diana Miller", email: "diana@admin.com", mobileNumber: "1112223334", hashedPassword: mockPasswordHash, role: "Admin", createdAt: "2023-12-01", lockerId: null, createdByUid: null, status: "active", address: "1 Admin Plaza", shopName: "Admin Corp", dealerCode: "DLR-D4" },
+  { uid: "USR-005", name: "Ethan Davis", email: "ethan@super.com", mobileNumber: "1112223335", hashedPassword: mockPasswordHash, role: "Super Distributor", createdAt: "2024-04-05", lockerId: null, createdByUid: "USR-004", status: "active", address: "2 Super Highway", shopName: "Super Supplies", dealerCode: "DLR-E5" },
 ];
 
 
