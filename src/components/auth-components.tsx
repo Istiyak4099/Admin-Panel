@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signInWithCustomToken } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,9 +27,52 @@ function GoogleIcon() {
 const firebaseConfigError = "Firebase is not configured. Please add your Firebase project configuration to the .env file.";
 
 export function AdminLoginButton() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start loading to handle redirect
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!auth) {
+      toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
+      setIsLoading(false);
+      return;
+    }
+
+    const processRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          // User has successfully signed in. Now verify on backend.
+          const idToken = await result.user.getIdToken();
+          const response = await fetch('/api/auth/google-signin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Admin verification failed.');
+          }
+          toast({ title: 'Admin login successful!' });
+          router.push('/dashboard');
+        } else {
+          // No redirect result, so we're not in the middle of a login flow.
+          setIsLoading(false);
+        }
+      } catch (error: any) {
+        if (error.code !== 'auth/no-redirect-result') {
+           toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: error.message || 'An unexpected error occurred.',
+          });
+        }
+        setIsLoading(false);
+      }
+    };
+    
+    processRedirectResult();
+  }, [auth, router, toast]);
 
   const handleAdminLogin = async () => {
     setIsLoading(true);
@@ -39,34 +82,7 @@ export function AdminLoginButton() {
         return;
     }
     const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-
-      const response = await fetch('/api/auth/google-signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-      
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Admin verification failed.');
-      }
-      
-      toast({ title: 'Admin login successful!' });
-      router.push('/dashboard');
-
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await signInWithRedirect(auth, provider);
   };
 
   return (
