@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  redirect('/dashboard');
+  // Redirect to the new login chooser page instead of the dashboard
+  redirect('/login');
 }

@@ -6,7 +6,7 @@ import type { User } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
   try {
-    const { mobileNumber, password } = await req.json();
+    const { mobileNumber, password, role } = await req.json();
 
     if (!mobileNumber || !password) {
       return NextResponse.json(
@@ -30,19 +30,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    if (userData.role !== 'Retailer') {
+    if (userData.role === 'Admin') {
       return NextResponse.json(
-        { error: 'Login is restricted. Only Retailer accounts are allowed.' },
+        { error: 'Admin accounts must use Google Sign-In.' },
         { status: 403 }
       );
     }
+    
+    if (role && (userData.role !== role && userData.role !== 'Retailer')) {
+       return NextResponse.json(
+        { error: `Access denied. You do not have the required '${role}' role.` },
+        { status: 403 }
+      );
+    }
+
 
     if (userData.status !== 'active') {
       return NextResponse.json({ error: 'This user account is inactive.' }, { status: 403 });
     }
 
-    // Self-healing: Ensure a Firebase Auth user exists for this UID.
-    // This handles cases where a user might have been created in Firestore but not in Auth.
     try {
       await admin.auth().getUser(userData.uid);
     } catch (error: any) {
@@ -53,11 +59,10 @@ export async function POST(req: NextRequest) {
         });
         console.log(`Created missing Firebase Auth user for UID: ${userData.uid}`);
       } else {
-        throw error; // Re-throw other auth errors
+        throw error;
       }
     }
 
-    // Generate a custom token for the user to sign in with on the client.
     const token = await admin.auth().createCustomToken(userData.uid);
 
     return NextResponse.json({ customToken: token });
