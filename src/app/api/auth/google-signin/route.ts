@@ -29,12 +29,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Email not found in Google token.' }, { status: 400 });
     }
     
+    /*
+    // FOR TESTING: Temporarily disabled admin whitelist. 
+    // Any Google account can now log in as an admin.
+    // To re-enable, uncomment this block.
     if (!ADMIN_EMAIL_WHITELIST.includes(email)) {
       return NextResponse.json(
         { error: 'Access denied. You are not an authorized administrator.' },
         { status: 403 }
       );
     }
+    */
     
     const usersRef = firestore.collection('users');
     const userSnapshot = await usersRef.where('email', '==', email).limit(1).get();
