@@ -1,10 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
 import bcrypt from 'bcryptjs';
 import type { User } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
+  if (!firestore) {
+    return NextResponse.json({ error: serverConfigError }, { status: 500 });
+  }
+
   try {
     const { mobileNumber, password, role } = await req.json();
 

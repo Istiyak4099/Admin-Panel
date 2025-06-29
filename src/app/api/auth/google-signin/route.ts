@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, serverConfigError } from '@/lib/firebase-admin';
 
 // IMPORTANT: This is the whitelist of emails allowed to log in as Admin.
 // In a real application, you would manage this list in a secure database.
@@ -11,6 +11,10 @@ const ADMIN_EMAIL_WHITELIST = [
 ];
 
 export async function POST(req: NextRequest) {
+  if (!firestore) {
+    return NextResponse.json({ error: serverConfigError }, { status: 500 });
+  }
+
   try {
     const { idToken } = await req.json();
 

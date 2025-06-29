@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import bcrypt from 'bcryptjs';
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
 
 const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
@@ -27,6 +27,11 @@ export interface CreateUserState {
 export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
+
+  if (!firestore) {
+    return { error: serverConfigError };
+  }
+
   const validatedFields = CreateUserSchema.safeParse(data);
 
   if (!validatedFields.success) {
