@@ -63,19 +63,18 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Manage user accounts and assign lockers to users. (Showing mock data).
+              Manage user accounts, including roles and contact information. (Showing mock data).
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID (UID)</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Mobile Number</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">Shop Name</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created At</TableHead>
+                  <TableHead className="hidden sm:table-cell">Status</TableHead>
                    <TableHead>
                     <span className="sr-only">Actions</span>
                   </TableHead>
@@ -84,16 +83,15 @@ export default function UsersPage() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.uid}>
-                    <TableCell className="font-medium">{user.uid}</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.mobileNumber}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{user.shopName}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{user.role}</Badge>
                     </TableCell>
-                     <TableCell>
+                     <TableCell className="hidden sm:table-cell">
                       <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="capitalize">{user.status}</Badge>
                     </TableCell>
-                    <TableCell>{user.createdAt}</TableCell>
                      <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
