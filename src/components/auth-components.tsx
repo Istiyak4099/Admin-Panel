@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,7 +25,7 @@ function GoogleIcon() {
     );
 }
 
-const firebaseConfigError = "Firebase is not configured. Please add your Firebase project configuration to the .env file.";
+const firebaseConfigError = "Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.";
 
 export function AdminLoginButton() {
   const [isLoading, setIsLoading] = useState(true); // Start loading to handle redirect
@@ -60,7 +61,14 @@ export function AdminLoginButton() {
           setIsLoading(false);
         }
       } catch (error: any) {
-        if (error.code !== 'auth/no-redirect-result') {
+        if (error.code === 'auth/unauthorized-domain') {
+          toast({
+            variant: 'destructive',
+            title: 'Action Required: Unauthorized Domain',
+            description: "This app's domain must be authorized. Go to Firebase Console > Authentication > Settings > Authorized domains, and add the domain from your browser's URL bar.",
+            duration: 20000,
+          });
+        } else if (error.code !== 'auth/no-redirect-result') {
            toast({
             variant: 'destructive',
             title: 'Login Failed',
@@ -82,7 +90,17 @@ export function AdminLoginButton() {
         return;
     }
     const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (error: any) {
+      console.error("signInWithRedirect immediate error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Could Not Start Login',
+        description: error.message || 'An unexpected error occurred.',
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
