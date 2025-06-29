@@ -61,7 +61,14 @@ export function AdminLoginButton() {
           setIsLoading(false);
         }
       } catch (error: any) {
-        if (error.code === 'auth/unauthorized-domain') {
+        if (error.code === 'auth/operation-not-allowed') {
+          toast({
+            variant: 'destructive',
+            title: 'Action Required: Sign-In Method Disabled',
+            description: `Google Sign-In is not enabled for this Firebase project. Go to Firebase Console > Authentication > Sign-in method, and enable the 'Google' provider.`,
+            duration: 20000,
+          });
+        } else if (error.code === 'auth/unauthorized-domain') {
           const currentDomain = window.location.hostname;
           toast({
             variant: 'destructive',
