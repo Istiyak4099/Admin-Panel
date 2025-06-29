@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Shield, Users, FileText } from 'lucide-react';
 import { AdminLoginButton } from '@/components/auth-components';
+import { DomainHelper } from '@/components/domain-helper';
 
 export default function LoginPage() {
   return (
@@ -69,6 +70,11 @@ export default function LoginPage() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="w-full max-w-4xl">
+        <DomainHelper />
+      </div>
+
     </div>
   );
 }
