@@ -78,6 +78,7 @@ export async function createUserAction(
       address,
       shopName,
       dealerCode,
+      codeBalance: 0, // Initialize with zero codes
     };
 
     // Save the full user profile to the 'users' collection in Firestore

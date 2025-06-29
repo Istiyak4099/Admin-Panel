@@ -19,6 +19,15 @@ import { useToast } from '@/hooks/use-toast';
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 const firebaseConfigError = "Firebase is not configured. Please add your client-side Firebase project configuration to the .env file.";
 
+// Mock user data for display. In a real app, this would come from the auth state.
+const currentUser = {
+  name: "Admin User",
+  email: "admin@locker.pro",
+  avatar: "https://placehold.co/40x40.png",
+  fallback: "AD",
+  role: "Admin"
+};
+
 
 export function UserNav() {
   const router = useRouter();
@@ -52,21 +61,21 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-auto w-full justify-start gap-3 p-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="https://placehold.co/40x40.png" alt="@admin" data-ai-hint="female person" />
-            <AvatarFallback>AD</AvatarFallback>
+            <AvatarImage src={currentUser.avatar} alt={currentUser.name} data-ai-hint="male person" />
+            <AvatarFallback>{currentUser.fallback}</AvatarFallback>
           </Avatar>
           <div className="text-left">
-            <p className="text-sm font-medium">Admin User</p>
-            <p className="text-xs text-muted-foreground">admin@locker.pro</p>
+            <p className="text-sm font-medium">{currentUser.name}</p>
+            <p className="text-xs text-muted-foreground">{currentUser.email}</p>
           </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Admin</p>
+            <p className="text-sm font-medium leading-none">{currentUser.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              admin@locker.pro
+              {currentUser.email}
             </p>
           </div>
         </DropdownMenuLabel>

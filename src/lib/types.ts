@@ -11,6 +11,15 @@ export type Locker = {
   lastMaintenance: string;
 };
 
+export type CodeTransfer = {
+  id: string;
+  from: string; // User's name
+  to: string; // User's name
+  quantity: number;
+  date: string;
+  type: "assigned" | "retrieved";
+};
+
 export type User = {
   uid: string;
   name: string;
@@ -25,6 +34,8 @@ export type User = {
   address: string;
   shopName: string;
   dealerCode: string;
+  codeBalance: number;
+  transferHistory?: CodeTransfer[];
 };
 
 export type Payment = {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -20,8 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { users } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PlusCircle, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,8 +32,15 @@ import {
 } from "@/components/ui/dialog";
 import { CreateUserForm } from "@/components/create-user-form";
 
+// Mocking the logged-in user. In a real app, this would come from an auth context.
+const MOCK_LOGGED_IN_USER_ID = "USR-004"; // This is the Admin User
+
 export default function UsersPage() {
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+
+  // Filter users to show only those created by the logged-in user.
+  // For the Admin (USR-004), this will be Super Distributors.
+  const managedUsers = users.filter(user => user.createdByUid === MOCK_LOGGED_IN_USER_ID);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -63,7 +70,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Manage user accounts, including roles and contact information. (Showing mock data).
+              Viewing users directly under your management. Click a user to see their full profile.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -71,47 +78,54 @@ export default function UsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Shop Name</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="hidden sm:table-cell">Status</TableHead>
-                   <TableHead>
+                  <TableHead className="hidden sm:table-cell">Shop Name</TableHead>
+                  <TableHead className="hidden md:table-cell">Codes</TableHead>
+                  <TableHead>
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.uid}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{user.email}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{user.shopName}</TableCell>
+                {managedUsers.map((user) => (
+                  <TableRow key={user.uid} className="group hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      <Link href={`/dashboard/users/${user.uid}`} className="block hover:underline">
+                        {user.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{user.role}</Badge>
+                       <Link href={`/dashboard/users/${user.uid}`} className="block">
+                         <Badge variant="outline">{user.role}</Badge>
+                       </Link>
                     </TableCell>
-                     <TableCell className="hidden sm:table-cell">
-                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="capitalize">{user.status}</Badge>
+                    <TableCell className="hidden sm:table-cell">
+                      <Link href={`/dashboard/users/${user.uid}`} className="block">
+                        {user.shopName}
+                      </Link>
                     </TableCell>
-                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem>Assign Locker</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="hidden md:table-cell">
+                      <Link href={`/dashboard/users/${user.uid}`} className="block">
+                        {user.codeBalance}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="ghost" size="icon">
+                        <Link href={`/dashboard/users/${user.uid}`}>
+                          <ChevronRight className="h-4 w-4" />
+                          <span className="sr-only">View User</span>
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+             {managedUsers.length === 0 && (
+              <div className="py-10 text-center text-muted-foreground">
+                No users found under your management.
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

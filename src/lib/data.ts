@@ -1,4 +1,4 @@
-import type { Locker, User, Payment, Device } from "@/lib/types";
+import type { Locker, User, Payment, Device, CodeTransfer } from "@/lib/types";
 
 export const lockers: Locker[] = [
   { id: "LKR-001", location: "Sector A, Row 1", status: "occupied", userId: "USR-001", lastMaintenance: "2024-05-01" },
@@ -11,12 +11,33 @@ export const lockers: Locker[] = [
 
 const mockPasswordHash = "$2a$10$8.UnAmnsP3uI1I5IeG/a9.wGikp9A9bJjA.PfTjC8zHIOIDx3F7c6";
 
+// Hierarchical Structure:
+// Admin (USR-004)
+//   └── Super Distributor (USR-005 - Roni)
+//       └── Distributor (USR-002 - Bob)
+//           ├── Retailer (USR-001 - Alice)
+//           └── Retailer (USR-003 - Charlie)
 export const users: User[] = [
-  { uid: "USR-001", name: "Alice Johnson", email: "alice@retailer.com", mobileNumber: "1112223331", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-01-15", lockerId: "LKR-001", createdByUid: "USR-002", status: "active", address: "123 Retail Row", shopName: "Alice's Emporium", dealerCode: "DLR-A1" },
-  { uid: "USR-002", name: "Bob Williams", email: "bob@distributor.com", mobileNumber: "1112223332", hashedPassword: mockPasswordHash, role: "Distributor", createdAt: "2024-02-20", lockerId: "LKR-004", createdByUid: "USR-005", status: "active", address: "456 Distributor Drive", shopName: "Bob's Bargains", dealerCode: "DLR-B2" },
-  { uid: "USR-003", name: "Charlie Brown", email: "charlie@retailer.com", mobileNumber: "1112223333", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-03-10", lockerId: "LKR-006", createdByUid: "USR-002", status: "inactive", address: "789 Market Street", shopName: "Charlie's Corner", dealerCode: "DLR-C3" },
-  { uid: "USR-004", name: "Diana Miller", email: "diana@admin.com", mobileNumber: "1112223334", hashedPassword: mockPasswordHash, role: "Admin", createdAt: "2023-12-01", lockerId: null, createdByUid: null, status: "active", address: "1 Admin Plaza", shopName: "Admin Corp", dealerCode: "DLR-D4" },
-  { uid: "USR-005", name: "Ethan Davis", email: "ethan@super.com", mobileNumber: "1112223335", hashedPassword: mockPasswordHash, role: "Super Distributor", createdAt: "2024-04-05", lockerId: null, createdByUid: "USR-004", status: "active", address: "2 Super Highway", shopName: "Super Supplies", dealerCode: "DLR-E5" },
+  { 
+    uid: "USR-001", name: "Alice Johnson", email: "alice@retailer.com", mobileNumber: "1112223331", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-01-15", lockerId: "LKR-001", 
+    createdByUid: "USR-002", status: "active", address: "123 Retail Row", shopName: "Alice's Emporium", dealerCode: "DLR-A1", codeBalance: 50 
+  },
+  { 
+    uid: "USR-002", name: "Bob Williams", email: "bob@distributor.com", mobileNumber: "1112223332", hashedPassword: mockPasswordHash, role: "Distributor", createdAt: "2024-02-20", lockerId: "LKR-004", 
+    createdByUid: "USR-005", status: "active", address: "456 Distributor Drive", shopName: "Bob's Bargains", dealerCode: "DLR-B2", codeBalance: 200 
+  },
+  { 
+    uid: "USR-003", name: "Charlie Brown", email: "charlie@retailer.com", mobileNumber: "1112223333", hashedPassword: mockPasswordHash, role: "Retailer", createdAt: "2024-03-10", lockerId: "LKR-006", 
+    createdByUid: "USR-002", status: "inactive", address: "789 Market Street", shopName: "Charlie's Corner", dealerCode: "DLR-C3", codeBalance: 25 
+  },
+  { 
+    uid: "USR-004", name: "Admin User", email: "admin@locker.pro", mobileNumber: "1112223334", hashedPassword: mockPasswordHash, role: "Admin", createdAt: "2023-12-01", lockerId: null, 
+    createdByUid: null, status: "active", address: "1 Admin Plaza", shopName: "Admin Corp", dealerCode: "N/A", codeBalance: 10000 
+  },
+  { 
+    uid: "USR-005", name: "Roni Singh", email: "roni@super.com", mobileNumber: "1112223335", hashedPassword: mockPasswordHash, role: "Super Distributor", createdAt: "2024-04-05", lockerId: null, 
+    createdByUid: "USR-004", status: "active", address: "2 Super Highway", shopName: "Roni's Super Distribution", dealerCode: "DLR-S1", codeBalance: 1000 
+  },
 ];
 
 
@@ -40,4 +61,13 @@ export const paymentForecast = [
     { name: 'Week 2', forecast: 3000 },
     { name: 'Week 3', forecast: 2000 },
     { name: 'Week 4', forecast: 2780 },
+];
+
+
+export const codeTransfers: CodeTransfer[] = [
+  { id: "TRN-001", from: "Roni Singh", to: "Bob Williams", quantity: 500, date: "2024-07-10", type: "assigned" },
+  { id: "TRN-002", from: "Admin User", to: "Roni Singh", quantity: 1000, date: "2024-07-09", type: "assigned" },
+  { id: "TRN-003", from: "Bob Williams", to: "Alice Johnson", quantity: 100, date: "2024-07-11", type: "assigned" },
+  { id: "TRN-004", from: "Bob Williams", to: "Charlie Brown", quantity: 50, date: "2024-07-12", type: "assigned" },
+  { id: "TRN-005", from: "Bob Williams", to: "Roni Singh", quantity: 100, date: "2024-07-15", type: "retrieved" },
 ];
