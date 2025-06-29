@@ -17,6 +17,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
+const firebaseConfigError = "Firebase is not configured. Please add your client-side Firebase project configuration to the .env file.";
+
 
 export function UserNav() {
   const router = useRouter();
@@ -26,8 +28,8 @@ export function UserNav() {
     if (!auth) {
       toast({
         variant: 'destructive',
-        title: 'Logout Failed',
-        description: 'Firebase is not configured correctly.',
+        title: 'Configuration Error',
+        description: firebaseConfigError,
       });
       return;
     }
