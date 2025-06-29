@@ -62,10 +62,11 @@ export function AdminLoginButton() {
         }
       } catch (error: any) {
         if (error.code === 'auth/unauthorized-domain') {
+          const currentDomain = window.location.hostname;
           toast({
             variant: 'destructive',
             title: 'Action Required: Unauthorized Domain',
-            description: "This app's domain must be authorized. Go to Firebase Console > Authentication > Settings > Authorized domains, and add the domain from your browser's URL bar.",
+            description: `The domain '${currentDomain}' is not authorized. Go to Firebase Console > Authentication > Settings > Authorized domains, and add this exact domain.`,
             duration: 20000,
           });
         } else if (error.code !== 'auth/no-redirect-result') {
