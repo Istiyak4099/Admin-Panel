@@ -9,8 +9,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase for client-side usage only if config is available
-export const firebaseApp: FirebaseApp | null = 
-    firebaseConfig.apiKey && !getApps().length 
-    ? initializeApp(firebaseConfig) 
-    : firebaseConfig.apiKey ? getApp() : null;
+let firebaseApp: FirebaseApp | null = null;
+
+// A simple check to see if the values look like they've been replaced.
+const isConfigProvided = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('YOUR_API_KEY_HERE');
+
+if (isConfigProvided) {
+    if (!getApps().length) {
+        firebaseApp = initializeApp(firebaseConfig);
+    } else {
+        firebaseApp = getApp();
+    }
+} else {
+    // This will help in debugging by showing a clear message in the browser console.
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        console.warn("Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.");
+    }
+}
+
+export { firebaseApp };
