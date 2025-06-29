@@ -35,7 +35,6 @@ export type User = {
   shopName: string;
   dealerCode: string;
   codeBalance: number;
-  transferHistory?: CodeTransfer[];
 };
 
 export type Payment = {

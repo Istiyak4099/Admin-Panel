@@ -13,9 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { devices } from "@/lib/data";
 
 export default function DevicesPage() {
   return (
@@ -41,17 +39,11 @@ export default function DevicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {devices.map((device) => (
-                  <TableRow key={device.id}>
-                    <TableCell className="font-medium">{device.id}</TableCell>
-                    <TableCell>{device.code}</TableCell>
-                    <TableCell>{device.assignedTo}</TableCell>
-                    <TableCell>
-                       <Badge variant={device.status === 'returned' ? 'outline' : 'default'} className="capitalize">{device.status}</Badge>
-                    </TableCell>
-                    <TableCell>{device.lastActivity}</TableCell>
-                  </TableRow>
-                ))}
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No devices found.
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </CardContent>

@@ -17,6 +17,7 @@ const CreateUserSchema = z.object({
   address: z.string().min(5, { message: 'Address is required.' }),
   shopName: z.string().min(2, { message: 'Shop Name is required.' }),
   dealerCode: z.string().min(1, { message: 'Dealer Code is required.' }),
+  createdByUid: z.string().min(1, { message: 'Creator UID is missing.' }),
 });
 
 export interface CreateUserState {
@@ -43,7 +44,7 @@ export async function createUserAction(
   }
 
   try {
-    const { name, mobileNumber, email, password, role, address, shopName, dealerCode } = validatedFields.data;
+    const { name, mobileNumber, email, password, role, address, shopName, dealerCode, createdByUid } = validatedFields.data;
 
     const usersRef = firestore.collection('users');
     const existingUserSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
@@ -57,7 +58,6 @@ export async function createUserAction(
     
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a user in Firebase Auth. The UID will be our single source of truth.
     const userRecord = await admin.auth().createUser({
       email,
       displayName: name,
@@ -73,20 +73,18 @@ export async function createUserAction(
       role,
       createdAt: new Date().toISOString(),
       status: 'active',
-      createdByUid: 'admin-user-id', // Placeholder for the currently logged-in admin's UID
+      createdByUid,
       lockerId: null,
       address,
       shopName,
       dealerCode,
-      codeBalance: 0, // Initialize with zero codes
+      codeBalance: 0,
     };
 
-    // Save the full user profile to the 'users' collection in Firestore
     await usersRef.doc(uid).set(newUser);
 
     console.log('New user created in Auth and Firestore:', { uid: newUser.uid, name: newUser.name });
 
-    // Don't send the password hash back to the client.
     const { hashedPassword: _, ...userToReturn } = newUser;
 
     return { user: userToReturn };
@@ -95,7 +93,6 @@ export async function createUserAction(
      if (e.code === 'auth/email-already-exists') {
         return { error: 'A user with this email address already exists in Firebase Authentication.' };
     }
-    // In a production app, you might want to clean up the created Auth user if the Firestore write fails.
     return { error: e.message || 'An unexpected error occurred. Please try again.' };
   }
 }

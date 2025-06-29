@@ -15,18 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { payments, paymentForecast } from "@/lib/data";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import type { PaymentStatus } from "@/lib/types";
-
-const statusVariant: Record<PaymentStatus, "default" | "secondary" | "destructive"> = {
-  paid: "default",
-  pending: "secondary",
-  overdue: "destructive"
-};
 
 export default function PaymentsPage() {
   const chartConfig = {
@@ -49,20 +40,9 @@ export default function PaymentsPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={paymentForecast} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                  <Tooltip
-                    cursor={false}
-                    content={<ChartTooltipContent
-                      formatter={(value) => `$${value.toLocaleString()}`}
-                      indicator="dot"
-                    />}
-                  />
-                  <Bar dataKey="forecast" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+               <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                  No payment data available.
+               </div>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -86,20 +66,11 @@ export default function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.id}</TableCell>
-                    <TableCell>{payment.userId}</TableCell>
-                    <TableCell>{payment.lockerId}</TableCell>
-                    <TableCell>${payment.amount.toFixed(2)}</TableCell>
-                    <TableCell>{payment.date}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[payment.status]} className="capitalize">
-                        {payment.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No payments found.
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </CardContent>

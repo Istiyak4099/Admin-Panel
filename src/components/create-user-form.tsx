@@ -23,10 +23,14 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { UserRole } from '@/lib/types';
 import { createUserAction } from '@/app/users/actions';
-import { useTransition, useState } from 'react';
+import { useTransition, useState, useEffect } from 'react';
 import { LoaderCircle, Eye, EyeOff } from 'lucide-react';
+import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
+import { firebaseApp } from '@/lib/firebase-client';
 
-const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
+const auth = firebaseApp ? getAuth(firebaseApp) : null;
+
+const userRoles: UserRole[] = ["Super Distributor", "Distributor", "Retailer"];
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -37,6 +41,7 @@ const CreateUserSchema = z.object({
   dealerCode: z.string().min(1, { message: 'Dealer Code is required.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
+  createdByUid: z.string().min(1), // Will be populated from auth state, not a form field
 });
 
 type CreateUserFormValues = z.infer<typeof CreateUserSchema>;
@@ -49,6 +54,15 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(CreateUserSchema),
@@ -57,16 +71,26 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       email: '',
       mobileNumber: '',
       password: '',
-      role: 'Retailer',
+      role: 'Distributor',
       shopName: '',
       address: '',
       dealerCode: '',
+      createdByUid: '',
     },
   });
 
   function onSubmit(data: CreateUserFormValues) {
+    if (!currentUser) {
+        toast({
+            variant: 'destructive',
+            title: 'Authentication Error',
+            description: 'You must be logged in to create a user.',
+        });
+        return;
+    }
+
     startTransition(async () => {
-      const result = await createUserAction(data);
+      const result = await createUserAction({...data, createdByUid: currentUser.uid});
 
       if (result.error) {
         toast({
@@ -77,7 +101,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       } else {
         toast({
           title: 'User created successfully',
-          description: `User ${result.user?.name} has been created in Firestore.`,
+          description: `User ${result.user?.name} has been created.`,
         });
         onSuccess();
         form.reset();
@@ -219,7 +243,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isPending}>
+        <Button type="submit" className="w-full" disabled={isPending || !currentUser}>
           {isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
           Create User
         </Button>

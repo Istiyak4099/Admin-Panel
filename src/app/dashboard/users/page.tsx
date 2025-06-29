@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -19,9 +19,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { users } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ChevronRight } from "lucide-react";
+import { PlusCircle, ChevronRight, LoaderCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,23 +30,62 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CreateUserForm } from "@/components/create-user-form";
+import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { firebaseApp } from '@/lib/firebase-client';
+import type { User } from "@/lib/types";
 
-// Mocking the logged-in user. In a real app, this would come from an auth context.
-const MOCK_LOGGED_IN_USER_ID = "USR-004"; // This is the Admin User
+const auth = firebaseApp ? getAuth(firebaseApp) : null;
+const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
 export default function UsersPage() {
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [managedUsers, setManagedUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Filter users to show only those created by the logged-in user.
-  // For the Admin (USR-004), this will be Super Distributors.
-  const managedUsers = users.filter(user => user.createdByUid === MOCK_LOGGED_IN_USER_ID);
+  useEffect(() => {
+    if (!auth) {
+        setLoading(false);
+        return;
+    };
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      setCurrentUser(user);
+      if (!user) {
+        setLoading(false);
+        setManagedUsers([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || !db) return;
+
+    const fetchManagedUsers = async () => {
+      setLoading(true);
+      try {
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("createdByUid", "==", currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        const usersList = querySnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
+        setManagedUsers(usersList);
+      } catch (error) {
+        console.error("Error fetching managed users: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchManagedUsers();
+  }, [currentUser]);
 
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="User Accounts">
         <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1">
+            <Button size="sm" className="gap-1" disabled={!currentUser}>
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Create User
@@ -61,7 +99,11 @@ export default function UsersPage() {
                 Fill out the form to add a new user to Firebase Auth and Firestore.
               </DialogDescription>
             </DialogHeader>
-            <CreateUserForm onSuccess={() => setIsCreateUserOpen(false)} />
+            <CreateUserForm onSuccess={() => {
+              setIsCreateUserOpen(false);
+              // Trigger a refetch
+              setCurrentUser(auth?.currentUser);
+            }} />
           </DialogContent>
         </Dialog>
       </DashboardHeader>
@@ -87,45 +129,54 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {managedUsers.map((user) => (
-                  <TableRow key={user.uid} className="group hover:bg-muted/50">
-                    <TableCell className="font-medium">
-                      <Link href={`/dashboard/users/${user.uid}`} className="block hover:underline">
-                        {user.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                       <Link href={`/dashboard/users/${user.uid}`} className="block">
-                         <Badge variant="outline">{user.role}</Badge>
-                       </Link>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Link href={`/dashboard/users/${user.uid}`} className="block">
-                        {user.shopName}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Link href={`/dashboard/users/${user.uid}`} className="block">
-                        {user.codeBalance}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="icon">
-                        <Link href={`/dashboard/users/${user.uid}`}>
-                          <ChevronRight className="h-4 w-4" />
-                          <span className="sr-only">View User</span>
-                        </Link>
-                      </Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      <LoaderCircle className="mx-auto h-6 w-6 animate-spin" />
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : managedUsers.length > 0 ? (
+                  managedUsers.map((user) => (
+                    <TableRow key={user.uid} className="group hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        <Link href={`/dashboard/users/${user.uid}`} className="block hover:underline">
+                          {user.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/dashboard/users/${user.uid}`} className="block">
+                          <Badge variant="outline">{user.role}</Badge>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Link href={`/dashboard/users/${user.uid}`} className="block">
+                          {user.shopName}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Link href={`/dashboard/users/${user.uid}`} className="block">
+                          {user.codeBalance}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="ghost" size="icon">
+                          <Link href={`/dashboard/users/${user.uid}`}>
+                            <ChevronRight className="h-4 w-4" />
+                            <span className="sr-only">View User</span>
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No users found under your management.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
-             {managedUsers.length === 0 && (
-              <div className="py-10 text-center text-muted-foreground">
-                No users found under your management.
-              </div>
-            )}
           </CardContent>
         </Card>
       </main>

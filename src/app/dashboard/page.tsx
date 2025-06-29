@@ -13,15 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { lockers, users, payments } from "@/lib/data";
 import { Lock, Users, CreditCard, AlertTriangle } from "lucide-react";
 
 export default function DashboardPage() {
-  const occupiedLockers = lockers.filter(l => l.status === 'occupied').length;
-  const pendingPayments = payments.filter(p => p.status === 'pending').length;
-  const recentUsers = users.slice(0, 5);
+  
+  // Note: The dashboard stats are currently set to 0.
+  // They should be wired to fetch live data from Firestore.
 
   return (
     <div className="flex flex-1 flex-col">
@@ -34,7 +32,7 @@ export default function DashboardPage() {
               <Lock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{lockers.length}</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">Available, Occupied, Maintenance</p>
             </CardContent>
           </Card>
@@ -44,7 +42,7 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">All user roles included</p>
             </CardContent>
           </Card>
@@ -54,9 +52,9 @@ export default function DashboardPage() {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{occupiedLockers}</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">
-                {((occupiedLockers / lockers.length) * 100).toFixed(0)}% utilization
+                0% utilization
               </p>
             </CardContent>
           </Card>
@@ -66,7 +64,7 @@ export default function DashboardPage() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingPayments}</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">Awaiting user action</p>
             </CardContent>
           </Card>
@@ -87,16 +85,11 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentUsers.map((user) => (
-                  <TableRow key={user.uid}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.mobileNumber}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.role}</Badge>
-                    </TableCell>
-                    <TableCell>{user.createdAt}</TableCell>
-                  </TableRow>
-                ))}
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    No recent users. Create a new user to get started.
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </CardContent>
