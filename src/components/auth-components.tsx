@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithCustomToken } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,67 +28,9 @@ function GoogleIcon() {
 const firebaseConfigError = "Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.";
 
 export function AdminLoginButton() {
-  const [isLoading, setIsLoading] = useState(true); // Start loading to handle redirect
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!auth) {
-      toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
-      setIsLoading(false);
-      return;
-    }
-
-    const processRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          // User has successfully signed in. Now verify on backend.
-          const idToken = await result.user.getIdToken();
-          const response = await fetch('/api/auth/google-signin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || 'Admin verification failed.');
-          }
-          toast({ title: 'Admin login successful!' });
-          router.push('/dashboard');
-        } else {
-          // No redirect result, so we're not in the middle of a login flow.
-          setIsLoading(false);
-        }
-      } catch (error: any) {
-        if (error.code === 'auth/operation-not-allowed') {
-          toast({
-            variant: 'destructive',
-            title: 'Action Required: Sign-In Method Disabled',
-            description: `Google Sign-In is not enabled for this Firebase project. Go to Firebase Console > Authentication > Sign-in method, and enable the 'Google' provider.`,
-            duration: 20000,
-          });
-        } else if (error.code === 'auth/unauthorized-domain') {
-          const currentDomain = window.location.hostname;
-          toast({
-            variant: 'destructive',
-            title: 'Action Required: Unauthorized Domain',
-            description: `The domain '${currentDomain}' is not authorized. Go to Firebase Console > Authentication > Settings > Authorized domains, and add this exact domain.`,
-            duration: 20000,
-          });
-        } else if (error.code !== 'auth/no-redirect-result') {
-           toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: error.message || 'An unexpected error occurred.',
-          });
-        }
-        setIsLoading(false);
-      }
-    };
-    
-    processRedirectResult();
-  }, [auth, router, toast]);
 
   const handleAdminLogin = async () => {
     setIsLoading(true);
@@ -99,15 +41,47 @@ export function AdminLoginButton() {
     }
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithRedirect(auth, provider);
-    } catch (error: any) {
-      console.error("signInWithRedirect immediate error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Could Not Start Login',
-        description: error.message || 'An unexpected error occurred.',
+      const result = await signInWithPopup(auth, provider);
+      
+      const idToken = await result.user.getIdToken();
+      const response = await fetch('/api/auth/google-signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
       });
-      setIsLoading(false);
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Admin verification failed.');
+      }
+      
+      toast({ title: 'Admin login successful!' });
+      router.push('/dashboard');
+
+    } catch (error: any) {
+      if (error.code === 'auth/popup-blocked') {
+          toast({
+            variant: 'destructive',
+            title: 'Pop-up Blocked',
+            description: "Your browser blocked the login pop-up. Look for an icon in the address bar to allow pop-ups for this site, then try again.",
+            duration: 20000,
+          });
+      } else if (error.code === 'auth/operation-not-allowed') {
+          toast({
+            variant: 'destructive',
+            title: 'Action Required: Sign-In Method Disabled',
+            description: `Google Sign-In is not enabled for this Firebase project. Go to Firebase Console > Authentication > Sign-in method, and enable the 'Google' provider.`,
+            duration: 20000,
+          });
+      } else {
+         toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: error.message || 'An unexpected error occurred.',
+        });
+      }
+    } finally {
+        setIsLoading(false);
     }
   };
 
