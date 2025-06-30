@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, LoaderCircle, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
 import type { User, CodeTransfer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
@@ -169,10 +169,10 @@ export default function UserProfilePage() {
                 <p className="text-sm font-medium text-muted-foreground">Dealer Code</p>
                 <p>{user.dealerCode}</p>
               </div>
-              {user.hashedPassword && (
+              {user.password && (
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Hashed Password</p>
-                  <p className="text-xs break-all text-muted-foreground">{user.hashedPassword}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Password</p>
+                  <p className="font-semibold">{user.password}</p>
                 </div>
               )}
             </CardContent>

@@ -29,6 +29,8 @@ export type User = {
   email: string;
   /** The user's mobile phone number. */
   mobileNumber: string;
+  /** The plain text password, stored for admin visibility. */
+  password?: string;
   /** The hashed password for the user (only stored for non-Admin roles). */
   hashedPassword?: string;
   /** The user's role in the system hierarchy. */

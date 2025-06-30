@@ -21,7 +21,7 @@ const CreateUserSchema = z.object({
 });
 
 export interface CreateUserState {
-  user?: Omit<User, 'hashedPassword'>;
+  user?: Omit<User, 'hashedPassword' | 'password'>;
   error?: string | null;
 }
 
@@ -69,6 +69,7 @@ export async function createUserAction(
       name,
       mobileNumber,
       email,
+      password,
       hashedPassword,
       role,
       createdAt: new Date().toISOString(),
@@ -85,7 +86,7 @@ export async function createUserAction(
 
     console.log('New user created in Auth and Firestore:', { uid: newUser.uid, name: newUser.name });
 
-    const { hashedPassword: _, ...userToReturn } = newUser;
+    const { hashedPassword: _, password: __, ...userToReturn } = newUser;
 
     return { user: userToReturn };
   } catch (e: any) {

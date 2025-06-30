@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       name: docData.name || 'Unnamed User',
       email: docData.email || 'no-email@example.com',
       mobileNumber: docData.mobileNumber || '',
+      password: docData.password,
       hashedPassword: docData.hashedPassword,
       role: docData.role || 'Retailer',
       createdAt: docData.createdAt || new Date().toISOString(),
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
     const token = await admin.auth().createCustomToken(userData.uid);
     
     // 10. Prepare the user object for the response (without the password)
-    const { hashedPassword, ...userToReturn } = userData;
+    const { hashedPassword, password: _, ...userToReturn } = userData;
 
     // 11. Return BOTH the token and the user object
     return NextResponse.json({ customToken: token, user: userToReturn });
