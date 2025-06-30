@@ -2,7 +2,6 @@
 'use client';
 
 import { getAuth, signOut, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,7 +25,6 @@ const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const firebaseConfigError = "Firebase is not configured. Please add your client-side Firebase project configuration to the .env file.";
 
 export function UserNav() {
-  const router = useRouter();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,10 +84,8 @@ export function UserNav() {
     }
     try {
       await signOut(auth);
-      // Explicitly clear the user state to prevent showing stale data
-      setCurrentUser(null);
       toast({ title: 'Logged out successfully.' });
-      router.push('/login');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       toast({

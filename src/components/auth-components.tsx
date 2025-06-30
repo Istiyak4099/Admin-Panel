@@ -29,7 +29,6 @@ const firebaseConfigError = "Firebase client configuration is invalid or missing
 
 export function AdminLoginButton() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
 
   const handleAdminLogin = async () => {
@@ -56,7 +55,7 @@ export function AdminLoginButton() {
       }
       
       toast({ title: 'Admin login successful!' });
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
 
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked') {
@@ -98,7 +97,6 @@ export function AdminLoginButton() {
 }
 
 export function CredentialsLoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
@@ -134,7 +132,7 @@ export function CredentialsLoginForm() {
       await signInWithCustomToken(auth, data.customToken);
 
       toast({ title: 'Login Successful!' });
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
 
     } catch (error: any) {
       toast({
