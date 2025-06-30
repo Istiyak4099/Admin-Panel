@@ -57,8 +57,11 @@ export async function POST(req: NextRequest) {
       await admin.auth().getUser(userData.uid);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
+        // If the user exists in Firestore but not in Auth, recreate the Auth record.
+        // This ensures data consistency if an Auth user was ever deleted manually.
         await admin.auth().createUser({
           uid: userData.uid,
+          email: userData.email,
           displayName: userData.name,
         });
         console.log(`Created missing Firebase Auth user for UID: ${userData.uid}`);
