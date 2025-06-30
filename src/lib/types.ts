@@ -21,19 +21,33 @@ export type CodeTransfer = {
 };
 
 export type User = {
+  /** The unique identifier from Firebase Authentication. */
   uid: string;
+  /** The full name of the user. */
   name: string;
+  /** The user's email address. */
   email: string;
+  /** The user's mobile phone number. */
   mobileNumber: string;
+  /** The hashed password for the user (only stored for non-Admin roles). */
   hashedPassword?: string;
+  /** The user's role in the system hierarchy. */
   role: UserRole;
+  /** The date the user account was created. */
   createdAt: string;
+  /** The ID of a locker assigned to the user, if any. */
   lockerId: string | null;
+  /** The UID of the user who created this user, establishing the hierarchy. Null for Admin. */
   createdByUid: string | null;
+  /** The current status of the user's account. */
   status: UserStatus;
+  /** The user's physical or mailing address. */
   address: string;
+  /** The name of the user's shop or business. */
   shopName: string;
+  /** A unique code assigned to a dealer. */
   dealerCode: string;
+  /** The number of codes the user currently holds. */
   codeBalance: number;
 };
 
