@@ -41,7 +41,6 @@ const CreateUserSchema = z.object({
   dealerCode: z.string().min(1, { message: 'Dealer Code is required.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(userRoles as [string, ...string[]]),
-  createdByUid: z.string().min(1), // Will be populated from auth state, not a form field
 });
 
 type CreateUserFormValues = z.infer<typeof CreateUserSchema>;
@@ -75,7 +74,6 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       shopName: '',
       address: '',
       dealerCode: '',
-      createdByUid: '',
     },
   });
 
