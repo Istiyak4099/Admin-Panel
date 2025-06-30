@@ -1,3 +1,4 @@
+
 'use client';
 
 import { getAuth, signOut, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
@@ -85,6 +86,8 @@ export function UserNav() {
     }
     try {
       await signOut(auth);
+      // Explicitly clear the user state to prevent showing stale data
+      setCurrentUser(null);
       toast({ title: 'Logged out successfully.' });
       router.push('/login');
     } catch (error) {
