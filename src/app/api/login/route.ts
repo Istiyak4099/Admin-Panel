@@ -29,26 +29,30 @@ export async function POST(req: NextRequest) {
     const userDoc = snapshot.docs[0];
     const docData = userDoc.data();
 
-    // Explicitly construct the user object to ensure data integrity and the correct UID.
-    // This is more robust than relying on the spread operator.
+    // Ensure a complete user object is constructed, providing default values for any potentially missing fields.
+    // This prevents an incomplete object from being sent, which was the root cause of the issue.
     const userData: User = {
       uid: userDoc.id,
-      name: docData.name,
-      email: docData.email,
-      mobileNumber: docData.mobileNumber,
-      hashedPassword: docData.hashedPassword,
-      role: docData.role,
-      createdAt: docData.createdAt,
-      status: docData.status,
-      createdByUid: docData.createdByUid,
-      lockerId: docData.lockerId,
-      address: docData.address,
-      shopName: docData.shopName,
-      dealerCode: docData.dealerCode,
-      codeBalance: docData.codeBalance,
+      name: docData.name || 'Unnamed User',
+      email: docData.email || 'no-email@example.com',
+      mobileNumber: docData.mobileNumber || '',
+      hashedPassword: docData.hashedPassword, // This is required for the password check
+      role: docData.role || 'Retailer',
+      createdAt: docData.createdAt || new Date().toISOString(),
+      status: docData.status || 'inactive',
+      createdByUid: docData.createdByUid || null,
+      lockerId: docData.lockerId || null,
+      address: docData.address || '',
+      shopName: docData.shopName || 'N/A',
+      dealerCode: docData.dealerCode || 'N/A',
+      codeBalance: docData.codeBalance || 0,
     };
     
-    const isPasswordValid = await bcrypt.compare(password, userData.hashedPassword || '');
+    if (!userData.hashedPassword) {
+        return NextResponse.json({ error: 'User account is not configured for password login.' }, { status: 401 });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, userData.hashedPassword);
     if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
