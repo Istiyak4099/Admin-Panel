@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    if (role && (userData.role !== role && userData.role !== 'Retailer')) {
+    // Stricter role check: if a role is specified for the login form, the user's role must match exactly.
+    if (role && userData.role !== role) {
        return NextResponse.json(
         { error: `Access denied. You do not have the required '${role}' role.` },
         { status: 403 }
