@@ -72,8 +72,11 @@ export async function POST(req: NextRequest) {
     }
 
     const token = await admin.auth().createCustomToken(userData.uid);
+    
+    // Omit the hashedPassword before returning the user object to the client
+    const { hashedPassword, ...userToReturn } = userData;
 
-    return NextResponse.json({ customToken: token });
+    return NextResponse.json({ customToken: token, user: userToReturn });
 
   } catch (error) {
     console.error('Login API error:', error);
