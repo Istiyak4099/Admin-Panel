@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard-header";
 import {
@@ -23,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, LoaderCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, LoaderCircle, ChevronRight } from "lucide-react";
 import type { User, CodeTransfer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
@@ -168,6 +169,12 @@ export default function UserProfilePage() {
                 <p className="text-sm font-medium text-muted-foreground">Dealer Code</p>
                 <p>{user.dealerCode}</p>
               </div>
+              {user.hashedPassword && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Hashed Password</p>
+                  <p className="text-xs break-all text-muted-foreground">{user.hashedPassword}</p>
+                </div>
+              )}
             </CardContent>
             <CardFooter>
                  <Button variant="outline">Reset Password</Button>
@@ -248,7 +255,7 @@ export default function UserProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Managed Users</CardTitle>
-                    <CardDescription>Users created and managed by {user.name}.</CardDescription>
+                    <CardDescription>Users created and managed by {user.name}. Click a user to see their profile.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <Table>
@@ -258,15 +265,42 @@ export default function UserProfilePage() {
                                 <TableHead>Role</TableHead>
                                 <TableHead>Shop Name</TableHead>
                                 <TableHead>Code Balance</TableHead>
+                                <TableHead>
+                                  <span className="sr-only">Actions</span>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {managedUsers.map((managedUser: User) => (
-                                <TableRow key={managedUser.uid}>
-                                    <TableCell>{managedUser.name}</TableCell>
-                                    <TableCell><Badge variant="outline">{managedUser.role}</Badge></TableCell>
-                                    <TableCell>{managedUser.shopName}</TableCell>
-                                    <TableCell>{managedUser.codeBalance}</TableCell>
+                                <TableRow key={managedUser.uid} className="group hover:bg-muted/50">
+                                    <TableCell className="font-medium">
+                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block hover:underline">
+                                        {managedUser.name}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
+                                        <Badge variant="outline">{managedUser.role}</Badge>
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
+                                        {managedUser.shopName}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
+                                        {managedUser.codeBalance}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button asChild variant="ghost" size="icon">
+                                        <Link href={`/dashboard/users/${managedUser.uid}`}>
+                                          <ChevronRight className="h-4 w-4" />
+                                          <span className="sr-only">View User</span>
+                                        </Link>
+                                      </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
