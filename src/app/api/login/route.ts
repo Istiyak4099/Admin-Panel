@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     }
 
     const userDoc = snapshot.docs[0];
-    const userData = userDoc.data() as User;
+    // This is the fix: combine the document data with its ID to create a complete user object.
+    const userData = { ...userDoc.data(), uid: userDoc.id } as User;
 
     const isPasswordValid = await bcrypt.compare(password, userData.hashedPassword || '');
     if (!isPasswordValid) {
