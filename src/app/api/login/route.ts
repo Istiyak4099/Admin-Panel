@@ -27,9 +27,27 @@ export async function POST(req: NextRequest) {
     }
 
     const userDoc = snapshot.docs[0];
-    // This is the fix: combine the document data with its ID to create a complete user object.
-    const userData = { ...userDoc.data(), uid: userDoc.id } as User;
+    const docData = userDoc.data();
 
+    // Explicitly construct the user object to ensure data integrity and the correct UID.
+    // This is more robust than relying on the spread operator.
+    const userData: User = {
+      uid: userDoc.id,
+      name: docData.name,
+      email: docData.email,
+      mobileNumber: docData.mobileNumber,
+      hashedPassword: docData.hashedPassword,
+      role: docData.role,
+      createdAt: docData.createdAt,
+      status: docData.status,
+      createdByUid: docData.createdByUid,
+      lockerId: docData.lockerId,
+      address: docData.address,
+      shopName: docData.shopName,
+      dealerCode: docData.dealerCode,
+      codeBalance: docData.codeBalance,
+    };
+    
     const isPasswordValid = await bcrypt.compare(password, userData.hashedPassword || '');
     if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
@@ -42,14 +60,12 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Stricter role check: if a role is specified for the login form, the user's role must match exactly.
     if (role && userData.role !== role) {
        return NextResponse.json(
         { error: `Access denied. You do not have the required '${role}' role.` },
         { status: 403 }
       );
     }
-
 
     if (userData.status !== 'active') {
       return NextResponse.json({ error: 'This user account is inactive.' }, { status: 403 });
@@ -59,8 +75,6 @@ export async function POST(req: NextRequest) {
       await admin.auth().getUser(userData.uid);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
-        // If the user exists in Firestore but not in Auth, recreate the Auth record.
-        // This ensures data consistency if an Auth user was ever deleted manually.
         await admin.auth().createUser({
           uid: userData.uid,
           email: userData.email,
@@ -74,15 +88,15 @@ export async function POST(req: NextRequest) {
 
     const token = await admin.auth().createCustomToken(userData.uid);
     
-    // Omit the hashedPassword before returning the user object to the client
     const { hashedPassword, ...userToReturn } = userData;
 
     return NextResponse.json({ customToken: token, user: userToReturn });
 
   } catch (error) {
     console.error('Login API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
-      { error: 'An internal server error occurred' },
+      { error: `An internal server error occurred: ${errorMessage}` },
       { status: 500 }
     );
   }
