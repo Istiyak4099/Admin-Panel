@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard-header";
 import {
   Card,
@@ -24,11 +24,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Trash2, LoaderCircle } from "lucide-react";
 import type { User, CodeTransfer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { deleteUserAction } from "@/app/users/actions";
+import { useToast } from "@/hooks/use-toast";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
@@ -81,6 +94,10 @@ function UserProfileSkeleton() {
 export default function UserProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+
   const [user, setUser] = useState<User | null>(null);
   const [managedUsers, setManagedUsers] = useState<User[]>([]);
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
@@ -123,6 +140,25 @@ export default function UserProfilePage() {
     fetchData();
   }, [userId]);
 
+  const handleDelete = () => {
+    startTransition(async () => {
+      const result = await deleteUserAction({ userId });
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "Error deleting user",
+          description: result.error,
+        });
+      } else {
+        toast({
+          title: "User deleted successfully",
+          description: `User ${user?.name} has been removed.`,
+        });
+        router.push("/dashboard/users");
+      }
+    });
+  };
+
   if (loading) {
     return <UserProfileSkeleton />;
   }
@@ -132,7 +168,7 @@ export default function UserProfilePage() {
       <div className="flex flex-1 flex-col">
         <DashboardHeader title="User Not Found" />
         <main className="flex-1 p-4 pt-6 md:p-8">
-          <p>The requested user could not be found.</p>
+          <p>The requested user could not be found. They may have been deleted.</p>
         </main>
       </div>
     );
@@ -176,8 +212,34 @@ export default function UserProfilePage() {
                 </div>
               )}
             </CardContent>
-            <CardFooter>
-                 <Button variant="outline">Reset Password</Button>
+            <CardFooter className="flex-col items-start gap-2">
+                 <Button variant="outline" className="w-full">Reset Password</Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-full">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the user
+                          account and remove their data from our servers. They will no longer
+                          be able to log in.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={isPending} className="bg-destructive hover:bg-destructive/90">
+                          {isPending ? (
+                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Continue
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
             </CardFooter>
           </Card>
 

@@ -97,3 +97,62 @@ export async function createUserAction(
     return { error: e.message || 'An unexpected error occurred. Please try again.' };
   }
 }
+
+export interface DeleteUserState {
+  success?: boolean;
+  error?: string | null;
+}
+
+const DeleteUserSchema = z.object({
+  userId: z.string().min(1, { message: 'User ID is required.' }),
+});
+
+export async function deleteUserAction(
+  data: z.infer<typeof DeleteUserSchema>
+): Promise<DeleteUserState> {
+  
+  if (!firestore || !admin.apps.length) {
+    return { error: serverConfigError };
+  }
+
+  const validatedFields = DeleteUserSchema.safeParse(data);
+
+  if (!validatedFields.success) {
+    return { error: 'Invalid User ID.' };
+  }
+  
+  const { userId } = validatedFields.data;
+
+  try {
+    // 1. Delete user from Firebase Authentication. This revokes their access.
+    await admin.auth().deleteUser(userId);
+    
+    // 2. Delete user's document from Firestore.
+    const userDocRef = firestore.collection('users').doc(userId);
+    await userDocRef.delete();
+
+    // 3. (Optional but good practice) In a real app, you would also delete all data created by this user.
+    // This is a complex operation and is omitted here for simplicity, but it's crucial for data integrity.
+    // For example: query all documents where `createdByUid` === userId and delete them.
+
+    console.log(`Successfully deleted user ${userId} from Auth and Firestore.`);
+    
+    return { success: true };
+  } catch (e: any) {
+    console.error('Delete User Action Error:', e);
+    // If auth user doesn't exist, they can't log in anyway.
+    // Still try to delete from firestore as a cleanup step.
+    if (e.code === 'auth/user-not-found') {
+        try {
+            const userDocRef = firestore.collection('users').doc(userId);
+            await userDocRef.delete();
+            console.log(`Deleted orphan Firestore user ${userId}. Auth user was already gone.`);
+            return { success: true };
+        } catch (fsError: any) {
+             console.error('Error deleting orphan Firestore user:', fsError);
+             return { error: fsError.message || 'An unexpected error occurred while deleting from Firestore.' };
+        }
+    }
+    return { error: e.message || 'An unexpected error occurred.' };
+  }
+}
