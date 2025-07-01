@@ -243,7 +243,7 @@ export default function UserProfilePage() {
                             <TableRow>
                                 <TableCell colSpan={5} className="h-24 text-center">
                                     No transfer history found.
-                                </TableCell>
+                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
