@@ -10,23 +10,36 @@ const ADMIN_EMAIL_WHITELIST = [
   // Add your company's admin emails here
 ];
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+};
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+}
+
 export async function POST(req: NextRequest) {
   if (!firestore) {
-    return NextResponse.json({ error: serverConfigError }, { status: 500 });
+    return NextResponse.json({ error: serverConfigError }, { status: 500, headers: corsHeaders });
   }
 
   try {
     const { idToken } = await req.json();
 
     if (!idToken) {
-      return NextResponse.json({ error: 'ID token is required' }, { status: 400 });
+      return NextResponse.json({ error: 'ID token is required' }, { status: 400, headers: corsHeaders });
     }
 
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const email = decodedToken.email;
 
     if (!email) {
-        return NextResponse.json({ error: 'Email not found in Google token.' }, { status: 400 });
+        return NextResponse.json({ error: 'Email not found in Google token.' }, { status: 400, headers: corsHeaders });
     }
     
     /*
@@ -36,7 +49,7 @@ export async function POST(req: NextRequest) {
     if (!ADMIN_EMAIL_WHITELIST.includes(email)) {
       return NextResponse.json(
         { error: 'Access denied. You are not an authorized administrator.' },
-        { status: 403 }
+        { status: 403, headers: corsHeaders }
       );
     }
     */
@@ -67,13 +80,13 @@ export async function POST(req: NextRequest) {
     // The client-side SDK has already handled the sign-in.
     // This API route just verifies the user's admin status.
     // Returning success is all that's needed.
-    return NextResponse.json({ success: true, message: 'Admin verified successfully.' });
+    return NextResponse.json({ success: true, message: 'Admin verified successfully.' }, { headers: corsHeaders });
 
   } catch (error) {
     console.error('Admin Sign-In API error:', error);
     return NextResponse.json(
       { error: 'An internal server error occurred' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
