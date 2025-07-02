@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials. Password incorrect.' }, { status: 401, headers: corsHeaders });
     }
 
-    // 6. Construct the full user data object with defaults for safety
+    // 6. Construct the user data object for validation checks
     const userData: User = {
       uid: userDoc.id,
       name: docData.name || 'Unnamed User',
@@ -101,11 +101,8 @@ export async function POST(req: NextRequest) {
     // 9. Create the custom token
     const token = await admin.auth().createCustomToken(userData.uid);
     
-    // 10. Prepare the user object for the response (without the password)
-    const { hashedPassword, password: _, ...userToReturn } = userData;
-
-    // 11. Return BOTH the token and the user object
-    return NextResponse.json({ customToken: token, user: userToReturn }, { headers: corsHeaders });
+    // 10. Return ONLY the token
+    return NextResponse.json({ customToken: token }, { headers: corsHeaders });
 
   } catch (error) {
     console.error('Login API critical error:', error);
