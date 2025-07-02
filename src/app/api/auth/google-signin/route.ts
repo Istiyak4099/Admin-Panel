@@ -13,7 +13,7 @@ const ADMIN_EMAIL_WHITELIST = [
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 export async function OPTIONS(req: NextRequest) {
@@ -77,9 +77,6 @@ export async function POST(req: NextRequest) {
         console.log(`Created new admin user in Firestore: ${email}`);
     }
 
-    // The client-side SDK has already handled the sign-in.
-    // This API route just verifies the user's admin status.
-    // Returning success is all that's needed.
     return NextResponse.json({ success: true, message: 'Admin verified successfully.' }, { headers: corsHeaders });
 
   } catch (error) {

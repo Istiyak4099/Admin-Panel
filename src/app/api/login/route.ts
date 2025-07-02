@@ -7,7 +7,7 @@ import type { User } from '@/lib/types';
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 export async function OPTIONS(req: NextRequest) {
@@ -18,20 +18,17 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // 1. Check for Firebase Admin config
   if (!firestore) {
     console.error("Login API Error: Firestore is not initialized.");
     return NextResponse.json({ error: serverConfigError }, { status: 500, headers: corsHeaders });
   }
 
   try {
-    // 2. Get credentials from request
     const { mobileNumber, password, role } = await req.json();
     if (!mobileNumber || !password) {
       return NextResponse.json({ error: 'Mobile number and password are required' }, { status: 400, headers: corsHeaders });
     }
 
-    // 3. Find the user in Firestore
     const usersRef = firestore.collection('users');
     const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
     if (snapshot.empty) {
@@ -41,18 +38,15 @@ export async function POST(req: NextRequest) {
     const userDoc = snapshot.docs[0];
     const docData = userDoc.data();
 
-    // 4. Explicitly check for a password hash before proceeding
     if (!docData.hashedPassword || typeof docData.hashedPassword !== 'string') {
         return NextResponse.json({ error: 'User account is not configured for password login.' }, { status: 401, headers: corsHeaders });
     }
     
-    // 5. Compare the provided password with the stored hash
     const isPasswordValid = await bcrypt.compare(password, docData.hashedPassword);
     if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid credentials. Password incorrect.' }, { status: 401, headers: corsHeaders });
     }
 
-    // 6. Construct the user data object for validation checks
     const userData: User = {
       uid: userDoc.id,
       name: docData.name || 'Unnamed User',
@@ -71,7 +65,6 @@ export async function POST(req: NextRequest) {
       codeBalance: docData.codeBalance || 0,
     };
     
-    // 7. Perform role and status checks
     if (userData.role === 'Admin') {
       return NextResponse.json({ error: 'Admin accounts must use Google Sign-In.' }, { status: 403, headers: corsHeaders });
     }
@@ -82,7 +75,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This user account is inactive.' }, { status: 403, headers: corsHeaders });
     }
 
-    // 8. Ensure a corresponding Firebase Auth user exists
     try {
       await admin.auth().getUser(userData.uid);
     } catch (error: any) {
@@ -94,14 +86,12 @@ export async function POST(req: NextRequest) {
         });
         console.log(`Created missing Firebase Auth user for UID: ${userData.uid}`);
       } else {
-        throw error; // Re-throw other auth errors to be caught by the main catch block
+        throw error;
       }
     }
 
-    // 9. Create the custom token
     const token = await admin.auth().createCustomToken(userData.uid);
     
-    // 10. Return ONLY the token
     return NextResponse.json({ customToken: token }, { headers: corsHeaders });
 
   } catch (error) {
