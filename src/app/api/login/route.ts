@@ -107,6 +107,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Login API critical error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    return NextResponse.json({ error: `An internal server error occurred: ${errorMessage}` }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: errorMessage }, { status: 500, headers: corsHeaders });
   }
 }
