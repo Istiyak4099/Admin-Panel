@@ -2,8 +2,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, Users, FileText } from 'lucide-react';
-import { AdminLoginButton } from '@/components/auth-components';
-import { DomainHelper } from '@/components/domain-helper';
 
 export default function LoginPage() {
   return (
@@ -30,7 +28,9 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto flex flex-col items-center">
-            <AdminLoginButton />
+            <Button asChild className="w-full bg-red-600 text-white hover:bg-red-700">
+              <Link href="/credentials-login?role=Admin">Admin Login</Link>
+            </Button>
           </CardContent>
         </Card>
 
@@ -69,10 +69,6 @@ export default function LoginPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="w-full max-w-4xl">
-        <DomainHelper />
       </div>
 
     </div>

@@ -52,9 +52,6 @@ export async function POST(req: NextRequest) {
       codeBalance: docData.codeBalance || 0,
     };
     
-    if (userData.role === 'Admin') {
-      return NextResponse.json({ error: 'Admin accounts must use Google Sign-In.' }, { status: 403 });
-    }
     if (role && userData.role !== role) {
        return NextResponse.json({ error: `Access denied. You do not have the required '${role}' role.` }, { status: 403 });
     }
