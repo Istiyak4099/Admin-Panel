@@ -6,7 +6,7 @@ import type { User } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
   if (!firestore) {
-    console.error("Login API Error: Firestore is not initialized.");
+    console.error("Login API Error:", serverConfigError);
     return NextResponse.json({ error: serverConfigError }, { status: 500 });
   }
 
@@ -17,7 +17,62 @@ export async function POST(req: NextRequest) {
     }
 
     const usersRef = firestore.collection('users');
-    const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+    let snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+
+    // Special case: Create default admin if it doesn't exist on first login attempt
+    if (snapshot.empty && role === 'Admin' && mobileNumber === '0000000000' && password === 'admin123') {
+      console.log('Default admin user not found, creating one...');
+      
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const email = 'admin@lockersystem.com';
+      let uid = '';
+
+      try {
+        // Check if auth user exists to prevent re-creation error
+        const existingAuthUser = await admin.auth().getUserByEmail(email);
+        uid = existingAuthUser.uid;
+        console.log(`Admin auth user already exists with UID: ${uid}`);
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+          // Create if it doesn't exist
+          const adminAuthUser = await admin.auth().createUser({
+            email,
+            displayName: 'Admin',
+          });
+          uid = adminAuthUser.uid;
+          console.log(`Created new admin auth user with UID: ${uid}`);
+        } else {
+          // Re-throw other auth errors
+          throw error;
+        }
+      }
+
+      const newAdminUser: User = {
+        uid,
+        name: 'Admin',
+        mobileNumber: '0000000000',
+        email: email,
+        password: 'admin123', // Store plain text password for admin visibility
+        hashedPassword,
+        role: 'Admin',
+        createdAt: new Date().toISOString(),
+        status: 'active',
+        createdByUid: null,
+        lockerId: null,
+        address: 'Admin Center',
+        shopName: 'Admin Panel',
+        dealerCode: 'ADMIN',
+        codeBalance: 99999,
+      };
+
+      await usersRef.doc(uid).set(newAdminUser);
+      console.log('Default admin user document created in Firestore.');
+      
+      // Re-fetch the user to proceed with login
+      snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+    }
+
+
     if (snapshot.empty) {
       return NextResponse.json({ error: 'Invalid credentials. User not found.' }, { status: 401 });
     }
