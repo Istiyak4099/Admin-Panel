@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const usersRef = firestore.collection('users');
-    let snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+    const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
 
     // Special case: Create default admin if it doesn't exist on first login attempt
     if (snapshot.empty && role === 'Admin' && mobileNumber === '0000000000' && password === 'admin123') {
@@ -68,8 +68,9 @@ export async function POST(req: NextRequest) {
       await usersRef.doc(uid).set(newAdminUser);
       console.log('Default admin user document created in Firestore.');
       
-      // Re-fetch the user to proceed with login
-      snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+      // Directly create the token and return, avoiding a re-fetch that can fail due to index delay.
+      const token = await admin.auth().createCustomToken(newAdminUser.uid);
+      return NextResponse.json({ customToken: token });
     }
 
 
