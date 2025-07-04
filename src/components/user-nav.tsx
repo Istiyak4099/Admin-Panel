@@ -16,13 +16,47 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const firebaseConfigError = "Firebase is not configured. Please add your client-side Firebase project configuration to the .env file.";
+
+async function ensureAdminUserInFirestore(uid: string, email: string, name: string): Promise<User> {
+  if (!db) {
+    throw new Error("Firestore is not initialized.");
+  }
+  const userDocRef = doc(db, 'Users', uid);
+  const userDoc = await userDocRef.get();
+
+  if (userDoc.exists()) {
+    return userDoc.data() as User;
+  }
+  
+  // If the user document doesn't exist, create it.
+  // This makes the first login for a console-created admin self-healing.
+  const adminUserData: User = {
+    uid,
+    name: name || 'Admin',
+    email: email,
+    role: 'Admin',
+    createdAt: new Date().toISOString(),
+    status: 'active',
+    createdByUid: null,
+    lockerId: null,
+    address: 'Admin Center',
+    shopName: 'Admin Panel',
+    dealerCode: 'ADMIN',
+    codeBalance: 99999,
+    mobileNumber: '0000000000', // Default value
+  };
+
+  await setDoc(userDocRef, adminUserData);
+  console.log(`Created Firestore document for new Admin user: ${uid}`);
+  return adminUserData;
+}
 
 export function UserNav() {
   const { toast } = useToast();
@@ -38,30 +72,11 @@ export function UserNav() {
     const unsubscribe = onAuthStateChanged(auth, async (user: AuthUser | null) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            setCurrentUser(userDoc.data() as User);
-          } else {
-             // This might happen for an Admin user created via Google Sign-In before their Firestore doc exists
-            const adminUser: User = {
-              uid: user.uid,
-              name: user.displayName || 'Admin User',
-              email: user.email || 'admin@example.com',
-              role: 'Admin',
-              createdAt: new Date().toISOString(),
-              lockerId: null,
-              createdByUid: null,
-              status: 'active',
-              address: '',
-              shopName: 'Admin',
-              dealerCode: 'N/A',
-              codeBalance: 0
-            };
-            setCurrentUser(adminUser);
-          }
+          // Ensure the user exists in Firestore, creating them if they don't.
+          const userProfile = await ensureAdminUserInFirestore(user.uid, user.email || '', user.displayName || 'Admin');
+          setCurrentUser(userProfile);
         } catch (error) {
-          console.error("Failed to fetch user data from Firestore:", error);
+          console.error("Failed to fetch or create user data in Firestore:", error);
           setCurrentUser(null);
         }
       } else {
@@ -124,7 +139,7 @@ export function UserNav() {
           </Avatar>
           <div className="text-left">
             <p className="text-sm font-medium">{currentUser.name}</p>
-            <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+            <p className="text-sm text-muted-foreground">{currentUser.email}</p>
           </div>
         </Button>
       </DropdownMenuTrigger>

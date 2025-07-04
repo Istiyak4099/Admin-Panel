@@ -17,7 +17,7 @@ export default function LoginPage() {
             </code>
           </p>
           <p className="mt-2 font-bold">Default Admin Credentials:</p>
-          <p>Mobile: <code className="font-mono">0000000000</code></p>
+          <p>Email: <code className="font-mono">admin@lockersystem.com</code></p>
           <p>Password: <code className="font-mono">admin123</code></p>
         </div>
       )}

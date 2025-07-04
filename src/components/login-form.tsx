@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ const firebaseConfigError = "Firebase client configuration is invalid or missing
 export function LoginForm() {
   const { toast } = useToast();
 
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,28 +32,22 @@ export function LoginForm() {
     }
 
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed.');
-      }
-      
-      await signInWithCustomToken(auth, data.customToken);
-
+      await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Login Successful!' });
       window.location.href = '/dashboard';
 
     } catch (error: any) {
+      console.error('Login error:', error.code, error.message);
+      let description = 'An unexpected error occurred.';
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        description = 'Invalid credentials. Please check your email and password.';
+      } else if (error.code === 'auth/invalid-email') {
+        description = 'The email address is not valid.';
+      }
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
+        description,
       });
     } finally {
       setIsLoading(false);
@@ -72,13 +66,13 @@ export function LoginForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="mobileNumber">Mobile Number</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="mobileNumber"
-              type="text"
-              placeholder="Enter your mobile number"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="admin@lockersystem.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
