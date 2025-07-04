@@ -30,7 +30,7 @@ import { firebaseApp } from '@/lib/firebase-client';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
-const userRoles: UserRole[] = ["Super Distributor", "Distributor", "Retailer"];
+const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),

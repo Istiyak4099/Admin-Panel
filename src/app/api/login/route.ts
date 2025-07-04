@@ -30,10 +30,6 @@ export async function POST(req: NextRequest) {
     const userData = userDoc.data() as User;
     userData.uid = userDoc.id;
 
-    if (userData.role === 'Admin') {
-      return NextResponse.json({ error: 'Admin login must be done from the main login page.' }, { status: 403 });
-    }
-
     const isPasswordValid = userData.hashedPassword ? await bcrypt.compare(password, userData.hashedPassword) : false;
 
     if (!isPasswordValid) {
