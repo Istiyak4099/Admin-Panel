@@ -53,7 +53,7 @@ export function LoginHub() {
                 <CardDescription>Full system access and management</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full bg-red-600 text-white hover:bg-red-700" disabled={!auth}>
+                <Button asChild className="w-full bg-red-600 text-white hover:bg-red-700">
                     <Link href="/credentials-login?role=Admin">Admin Panel</Link>
                 </Button>
             </CardContent>
@@ -68,7 +68,7 @@ export function LoginHub() {
                 <CardDescription>Super management access</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={!auth}>
+                <Button asChild className="w-full bg-blue-600 text-white hover:bg-blue-700">
                     <Link href="/credentials-login?role=Super">Super Login</Link>
                 </Button>
             </CardContent>
@@ -83,7 +83,7 @@ export function LoginHub() {
                 <CardDescription>Distributor and retailer management</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full bg-green-600 text-white hover:bg-green-700" disabled={!auth}>
+                <Button asChild className="w-full bg-green-600 text-white hover:bg-green-700">
                     <Link href="/credentials-login?role=Distributor">Distributor Login</Link>
                 </Button>
             </CardContent>
