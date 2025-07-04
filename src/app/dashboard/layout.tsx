@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, X } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
 
 export default function DashboardLayout({
@@ -38,7 +38,9 @@ export default function DashboardLayout({
                 <span className="text-xs text-muted-foreground">Pro</span>
               </div>
             </div>
-            <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
+            <SidebarTrigger className="group-data-[collapsible=icon]:hidden">
+              <X />
+            </SidebarTrigger>
           </div>
         </SidebarHeader>
         <SidebarContent>
