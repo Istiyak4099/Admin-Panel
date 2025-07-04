@@ -109,6 +109,7 @@ export default function UserProfilePage() {
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [quantity, setQuantity] = useState("");
 
   useEffect(() => {
     if (!userId || !db) {
@@ -177,14 +178,18 @@ export default function UserProfilePage() {
         return;
     }
 
-    const quantity = Number(formData.get('quantity'));
+    const quantityValue = Number(quantity);
+    if (isNaN(quantityValue) || quantityValue <= 0) {
+      toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid positive number.' });
+      return;
+    }
     const actionType = formData.get('actionType') as 'assign' | 'retrieve';
     
     startCodeActionTransition(async () => {
       const result = await manageCodeBalanceAction({
         targetUserId: userId,
         actorUid: actor.uid,
-        quantity,
+        quantity: quantityValue,
         actionType,
       });
 
@@ -193,8 +198,7 @@ export default function UserProfilePage() {
       } else {
         toast({ title: "Success", description: result.success });
         setRefreshKey(prev => prev + 1); // Trigger refetch
-        const form = document.getElementById('code-management-form') as HTMLFormElement;
-        form?.reset();
+        setQuantity(""); // Reset controlled input
       }
     });
   };
@@ -308,14 +312,22 @@ export default function UserProfilePage() {
                  <form id="code-management-form" action={handleCodeManagement} className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>
                   <div className="flex items-start gap-2">
-                    <div className="flex-1">
-                      <Input id="code-quantity" name="quantity" type="number" placeholder="e.g., 100" min="1" required />
-                    </div>
-                    <Button type="submit" name="actionType" value="assign" disabled={codeActionPending}>
+                    <Input 
+                      id="code-quantity" 
+                      name="quantity" 
+                      type="number" 
+                      placeholder="e.g., 100" 
+                      min="1" 
+                      required
+                      className="flex-1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                    />
+                    <Button type="submit" name="actionType" value="assign" disabled={codeActionPending || !quantity}>
                       {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowDown />}
                        <span className="hidden sm:inline ml-2">Assign</span>
                     </Button>
-                    <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending}>
+                    <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending || !quantity}>
                       {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
                        <span className="hidden sm:inline ml-2">Retrieve</span>
                     </Button>
