@@ -52,36 +52,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mobile number and password are required' }, { status: 400 });
     }
 
+    // Special path for the default admin user.
+    // This is more robust for first-time setup.
+    if (role === 'Admin' && mobileNumber === '0000000000' && password === 'admin123') {
+        console.log('Default admin login attempt...');
+        const email = 'admin@lockersystem.com';
+        let adminAuthUser: admin.auth.UserRecord;
+
+        try {
+          adminAuthUser = await admin.auth().getUserByEmail(email);
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            console.log('Admin auth user not found, creating one...');
+            adminAuthUser = await admin.auth().createUser({ email, displayName: 'Admin' });
+          } else {
+            // Re-throw other auth errors
+            throw error;
+          }
+        }
+        
+        // Ensure the Firestore document exists for this user
+        await ensureAdminUser(adminAuthUser.uid, email);
+        
+        const token = await admin.auth().createCustomToken(adminAuthUser.uid);
+        return NextResponse.json({ customToken: token });
+    }
+
+    // Standard login path for all other users
     const usersRef = firestore.collection('users');
     const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
 
     if (snapshot.empty) {
-      // Special check: If no user is found by mobile number, it might be the very first admin login.
-      if (role === 'Admin' && mobileNumber === '0000000000' && password === 'admin123') {
-          console.log('First-time default admin login attempt...');
-          const email = 'admin@lockersystem.com';
-          let adminAuthUser: admin.auth.UserRecord;
-
-          try {
-            adminAuthUser = await admin.auth().getUserByEmail(email);
-          } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
-              console.log('Admin auth user not found, creating one...');
-              adminAuthUser = await admin.auth().createUser({ email, displayName: 'Admin' });
-            } else {
-              throw error;
-            }
-          }
-          await ensureAdminUser(adminAuthUser.uid, email);
-          const token = await admin.auth().createCustomToken(adminAuthUser.uid);
-          return NextResponse.json({ customToken: token });
-      }
       return NextResponse.json({ error: 'Invalid credentials. User not found.' }, { status: 401 });
     }
 
     const userDoc = snapshot.docs[0];
     const userData = userDoc.data() as User;
-    userData.uid = userDoc.id; // Ensure UID is attached
+    userData.uid = userDoc.id;
 
     // Role check
     if (role && userData.role !== role) {
@@ -90,9 +97,7 @@ export async function POST(req: NextRequest) {
 
     // Password validation
     let isPasswordValid = false;
-    if (userData.role === 'Admin' && password === 'admin123') {
-      isPasswordValid = true;
-    } else if (userData.hashedPassword) {
+    if (userData.hashedPassword) {
       isPasswordValid = await bcrypt.compare(password, userData.hashedPassword);
     } else {
        return NextResponse.json({ error: 'User account is not configured for password login.' }, { status: 401 });
@@ -106,17 +111,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This user account is inactive.' }, { status: 403 });
     }
 
-    // Ensure user exists in Firebase Auth, create if missing
+    // Ensure user exists in Firebase Auth for token generation, create if missing
     try {
       await admin.auth().getUser(userData.uid);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
+        console.log(`Auth user not found for ${userData.email}, creating one...`);
         await admin.auth().createUser({
           uid: userData.uid,
           email: userData.email,
           displayName: userData.name,
         });
-        console.log(`Created missing Firebase Auth user for UID: ${userData.uid}`);
       } else {
         throw error;
       }
