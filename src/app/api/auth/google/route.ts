@@ -5,20 +5,18 @@ import type { User } from '@/lib/types';
 
 async function ensureAdminUserInFirestore(uid: string, email: string, name: string): Promise<void> {
   if (!firestore) {
+    // This check prevents operations if the Admin SDK is not initialized.
     throw new Error(serverConfigError);
   }
   const userDocRef = firestore.collection('users').doc(uid);
   const userDoc = await userDocRef.get();
 
+  // If user already exists, we don't need to do anything.
   if (userDoc.exists) {
-    // Optional: Update role to Admin if it's not already, for safety.
-    if (userDoc.data()?.role !== 'Admin') {
-        await userDocRef.update({ role: 'Admin' });
-    }
     return;
   }
   
-  // Create the admin user document in Firestore if it doesn't exist.
+  // Create the admin user document in Firestore if it's their first time.
   const adminUserData: User = {
     uid,
     name: name || 'Admin',
@@ -35,10 +33,11 @@ async function ensureAdminUserInFirestore(uid: string, email: string, name: stri
   };
 
   await userDocRef.set(adminUserData);
-  console.log(`Created Firestore document for Admin user: ${uid}`);
+  console.log(`Created Firestore document for new Admin user: ${uid}`);
 }
 
 export async function POST(req: NextRequest) {
+  // Centralized check for Firebase Admin SDK initialization.
   if (!admin.apps.length || !firestore) {
     console.error("Google Auth API Error:", serverConfigError);
     return NextResponse.json({ error: serverConfigError }, { status: 500 });
@@ -58,15 +57,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Email not found in token' }, { status: 400 });
     }
 
-    // Ensure the user document exists in Firestore with the Admin role.
+    // Ensure the user document exists in Firestore.
     await ensureAdminUserInFirestore(uid, email, name || '');
 
-    // The user is authenticated with Google. Now create a custom token for session management.
+    // The user is authenticated. Create a custom token for our session management.
     const customToken = await admin.auth().createCustomToken(uid);
 
     return NextResponse.json({ customToken });
   } catch (error) {
     console.error('Google Auth API critical error:', error);
+    // Return a specific error message if it's the known config error.
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
