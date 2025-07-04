@@ -7,7 +7,7 @@ import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
 import { randomBytes } from 'crypto';
 
-const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
+const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),

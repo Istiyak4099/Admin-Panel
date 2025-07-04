@@ -44,46 +44,46 @@ export function LoginHub() {
 
   return (
     <div className="grid w-full max-w-5xl gap-8 md:grid-cols-3">
-        <Card className="border-primary/20 bg-primary/5 dark:bg-primary/10">
+        <Card className="border-red-500/20 bg-red-500/5 dark:bg-red-500/10">
             <CardHeader className="text-center items-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-500">
                     <Shield className="h-8 w-8" />
                 </div>
                 <CardTitle className="pt-2">Admin Panel</CardTitle>
                 <CardDescription>Full system access and management</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full" disabled={!auth}>
-                    <Link href="/credentials-login?role=Admin">Admin Login</Link>
+                <Button asChild className="w-full bg-red-600 text-white hover:bg-red-700" disabled={!auth}>
+                    <Link href="/credentials-login?role=Admin">Admin Panel</Link>
                 </Button>
             </CardContent>
         </Card>
         
-        <Card className="border-secondary-foreground/10">
+        <Card className="border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10">
             <CardHeader className="text-center items-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
                     <Users className="h-8 w-8" />
                 </div>
                 <CardTitle className="pt-2">Super Login</CardTitle>
-                <CardDescription>Super distributor management access</CardDescription>
+                <CardDescription>Super management access</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full" variant="secondary" disabled={!auth}>
+                <Button asChild className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={!auth}>
                     <Link href="/credentials-login?role=Super">Super Login</Link>
                 </Button>
             </CardContent>
         </Card>
         
-        <Card className="border-secondary-foreground/10">
+        <Card className="border-green-500/20 bg-green-500/5 dark:bg-green-500/10">
             <CardHeader className="text-center items-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10 text-green-500">
                     <FileText className="h-8 w-8" />
                 </div>
                 <CardTitle className="pt-2">Distributor Login</CardTitle>
                 <CardDescription>Distributor and retailer management</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full" variant="secondary" disabled={!auth}>
+                <Button asChild className="w-full bg-green-600 text-white hover:bg-green-700" disabled={!auth}>
                     <Link href="/credentials-login?role=Distributor">Distributor Login</Link>
                 </Button>
             </CardContent>

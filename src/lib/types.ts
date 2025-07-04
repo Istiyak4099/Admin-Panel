@@ -1,6 +1,6 @@
 export type LockerStatus = "available" | "occupied" | "maintenance";
 export type PaymentStatus = "paid" | "pending" | "overdue";
-export type UserRole = "Admin" | "Super Distributor" | "Distributor" | "Retailer";
+export type UserRole = "Admin" | "Super" | "Distributor" | "Retailer";
 export type UserStatus = "active" | "inactive";
 
 export type Locker = {

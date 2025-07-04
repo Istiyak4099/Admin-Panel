@@ -8,6 +8,12 @@ export default function LoginPage() {
          <p className="text-muted-foreground">Select your panel to access the system</p>
       </div>
       <LoginHub />
+       <div className="mt-8 max-w-4xl text-left text-sm text-muted-foreground">
+        <h3 className="font-semibold text-foreground mb-2">Access Information:</h3>
+        <p><span className="font-medium text-foreground">Admin:</span> Full system control, user creation, settings management</p>
+        <p><span className="font-medium text-foreground">Super:</span> Manage distributors, code allocation, regional oversight</p>
+        <p><span className="font-medium text-foreground">Distributor:</span> Manage retailers, device tracking, sales reports</p>
+      </div>
     </div>
   );
 }
