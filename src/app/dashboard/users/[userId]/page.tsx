@@ -105,20 +105,22 @@ export default function UserProfilePage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [actor, setActor] = useState<AuthUser | null>(null);
+  const [actorProfile, setActorProfile] = useState<User | null>(null);
   const [managedUsers, setManagedUsers] = useState<User[]>([]);
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [quantity, setQuantity] = useState("");
 
   useEffect(() => {
     if (!userId || !db) {
-      setLoading(false);
+      setPageLoading(false);
       return;
     }
 
     const fetchData = async () => {
-      setLoading(true);
+      setPageLoading(true);
       try {
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
@@ -138,7 +140,7 @@ export default function UserProfilePage() {
         console.error("Error fetching user profile data:", error);
         setUser(null);
       } finally {
-        setLoading(false);
+        setPageLoading(false);
       }
     };
 
@@ -146,9 +148,29 @@ export default function UserProfilePage() {
   }, [userId, refreshKey]);
 
   useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (!auth || !db) {
+      setAuthLoading(false);
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setActor(user);
+      if (user) {
+        try {
+          const actorDocRef = doc(db, 'users', user.uid);
+          const actorDoc = await getDoc(actorDocRef);
+          if (actorDoc.exists()) {
+            setActorProfile({ uid: user.uid, ...actorDoc.data() } as User);
+          } else {
+            setActorProfile(null);
+          }
+        } catch (error) {
+          console.error("Error fetching actor profile:", error);
+          setActorProfile(null);
+        }
+      } else {
+        setActorProfile(null);
+      }
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -203,7 +225,7 @@ export default function UserProfilePage() {
     });
   };
 
-  if (loading) {
+  if (pageLoading || authLoading) {
     return <UserProfileSkeleton />;
   }
 
@@ -293,14 +315,22 @@ export default function UserProfilePage() {
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Code Management</CardTitle>
-              <CardDescription>Assign or retrieve codes from this user.</CardDescription>
+               <CardTitle>
+                {actorProfile?.role === 'Admin'
+                  ? 'Generate & Manage Codes'
+                  : 'Code Management'}
+              </CardTitle>
+              <CardDescription>
+                {actorProfile?.role === 'Admin'
+                  ? 'Generate new codes by assigning them to this user.'
+                  : `Assign or retrieve codes from this user. Your current balance: ${actorProfile?.codeBalance ?? 0}`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex items-center space-x-4 rounded-md border p-4">
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      Current Code Balance
+                      {user.name}'s Code Balance
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Total codes this user currently holds.
