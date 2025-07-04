@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,14 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (auth) {
+      console.log('Firebase Diagnostic - Auth Domain:', auth.app.options.authDomain);
+    } else {
+      console.error('Firebase Diagnostic - Auth object not available. Check client configuration.');
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +52,8 @@ export function LoginForm() {
         description = 'Invalid credentials. Please check your email and password.';
       } else if (error.code === 'auth/invalid-email') {
         description = 'The email address is not valid.';
+      } else if (error.code === 'auth/requests-from-referer') {
+        description = 'Login blocked by Firebase. Please ensure this app\'s domain is added to "Authorized domains" in your Firebase Authentication settings.';
       }
       toast({
         variant: 'destructive',
