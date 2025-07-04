@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithCustomToken, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,60 +29,88 @@ function GoogleIcon() {
 
 export function GoogleSignInButton() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(true); // Start true to check for redirect result on initial load
+  const [isRedirecting, setIsRedirecting] = useState(false); // For button click action
+
+  useEffect(() => {
+    if (!auth) {
+      setIsProcessing(false);
+      return;
+    }
+
+    const processRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // User has just returned from the redirect.
+          toast({ title: "Authenticating..." });
+          const idToken = await result.user.getIdToken();
+
+          const response = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Google Sign-In failed on the server.');
+          }
+          
+          await signInWithCustomToken(auth, data.customToken);
+
+          toast({ title: 'Sign-in Successful!' });
+          window.location.href = '/dashboard';
+          return; // Stop further execution, we are navigating away
+        }
+      } catch (error: any) {
+        console.error('Google Sign-In Redirect Error:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Sign-In Failed',
+          description: error.message || 'An unexpected error occurred.',
+        });
+      }
+      // If there was no redirect result to process, or an error occurred, stop processing.
+      setIsProcessing(false);
+    };
+
+    processRedirectResult();
+  }, [toast]);
 
   const handleSignIn = async () => {
-    setIsLoading(true);
+    setIsRedirecting(true);
     if (!auth) {
       toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
-      setIsLoading(false);
+      setIsRedirecting(false);
       return;
     }
     const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-
-      const response = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Google Sign-In failed on the server.');
-      }
-      
-      await signInWithCustomToken(auth, data.customToken);
-
-      toast({ title: 'Sign-in Successful!' });
-      window.location.href = '/dashboard';
-
-    } catch (error: any) {
-      console.error('Google Sign-In Error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign-In Failed',
-        description: error.code === 'auth/popup-closed-by-user' 
-          ? 'Sign-in window was closed.'
-          : error.message || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await signInWithRedirect(auth, provider); // This will navigate the user away
   };
 
+  const isLoading = isProcessing || isRedirecting;
+
+  if (isLoading) {
+    return (
+      <Button disabled className="w-full">
+        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+        {isProcessing ? "Authenticating..." : "Redirecting..."}
+      </Button>
+    );
+  }
+
   return (
-    <Button onClick={handleSignIn} disabled={isLoading || !auth} className="w-full">
-      {isLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
+    <Button onClick={handleSignIn} disabled={!auth} className="w-full">
+      <GoogleIcon />
       Sign in with Google
     </Button>
   );
 }
+
 
 export function CredentialsLoginForm() {
   const searchParams = useSearchParams();
