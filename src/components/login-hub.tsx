@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,28 @@ const auth = firebaseApp ? getAuth(firebaseApp) : null;
 export function LoginHub() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    if (!auth) {
+        setIsCheckingAuth(false);
+        return;
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, redirect to dashboard.
+        // This will catch the state change after Google redirect.
+        window.location.href = '/dashboard';
+      } else {
+        // User is signed out.
+        setIsCheckingAuth(false);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   const handleAdminLogin = async () => {
     if (!auth) {
@@ -25,32 +47,28 @@ export function LoginHub() {
       return;
     }
     setIsLoading(true);
-    toast({ title: 'Signing in as Admin...' });
-
+    const provider = new GoogleAuthProvider();
     try {
-      const response = await fetch('/api/auth/google', {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Admin login failed.');
-      }
-
-      await signInWithCustomToken(auth, data.customToken);
-
-      toast({ title: 'Admin login successful!' });
-      window.location.href = '/dashboard';
-    } catch (error: any) {
-      console.error("Admin login error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Admin Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-      setIsLoading(false);
+        await signInWithRedirect(auth, provider);
+    } catch(error: any) {
+        console.error("Google Sign-In error:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Sign-In Failed',
+            description: error.message || 'An unexpected error occurred during sign-in.',
+        });
+        setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth || isLoading) {
+    return (
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+            <LoaderCircle className="h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">Please wait...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="grid w-full max-w-5xl gap-8 md:grid-cols-3">
