@@ -74,6 +74,12 @@ export function UserNav() {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client, after the initial render.
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!auth || !db) {
@@ -122,16 +128,20 @@ export function UserNav() {
     }
   };
 
-  if (loading) {
-    return (
-       <div className="flex items-center gap-3 p-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="w-32 space-y-1 group-data-[collapsible=icon]:hidden">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-full" />
-            </div>
-        </div>
-    );
+  const skeleton = (
+    <div className="flex items-center gap-3 p-2">
+      <Skeleton className="h-8 w-8 rounded-full" />
+      <div className="w-32 space-y-1 group-data-[collapsible=icon]:hidden">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-3 w-full" />
+      </div>
+    </div>
+  );
+  
+  // Before the component is mounted on the client, render a static skeleton
+  // to prevent hydration mismatch.
+  if (!mounted || loading) {
+    return skeleton;
   }
 
   if (!currentUser) {
