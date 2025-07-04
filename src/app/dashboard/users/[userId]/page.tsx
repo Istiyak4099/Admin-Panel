@@ -44,6 +44,7 @@ import {
 import { deleteUserAction, manageCodeBalanceAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CodeListDialog } from "@/components/code-list-dialog";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
@@ -327,17 +328,19 @@ export default function UserProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex items-center space-x-4 rounded-md border p-4">
+              <CodeListDialog userId={user.uid} userName={user.name}>
+                <div className="flex cursor-pointer items-center space-x-4 rounded-md border p-4 transition-colors hover:bg-muted/50">
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">
                       {user.name}'s Code Balance
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Total codes this user currently holds.
+                      Total available codes this user holds. Click to view.
                     </p>
                   </div>
                   <p className="text-2xl font-bold">{user.codeBalance}</p>
                 </div>
+              </CodeListDialog>
                 {!isSelf && (
                  <form action={handleCodeManagement} className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>

@@ -5,6 +5,7 @@ import type { User, UserRole, CodeTransfer } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
+import { randomBytes } from 'crypto';
 
 const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
@@ -158,6 +159,16 @@ export interface ManageCodeBalanceState {
   error?: string | null;
 }
 
+function generateUniqueCodes(quantity: number): string[] {
+  const codes = new Set<string>();
+  while (codes.size < quantity) {
+    const code = randomBytes(7).toString('hex'); // 14 hex characters
+    codes.add(code);
+  }
+  return Array.from(codes);
+}
+
+
 export async function manageCodeBalanceAction(
   data: z.infer<typeof ManageCodeBalanceSchema>
 ): Promise<ManageCodeBalanceState> {
@@ -181,6 +192,7 @@ export async function manageCodeBalanceAction(
 
   const actorRef = firestore.collection('users').doc(actorUid);
   const targetUserRef = firestore.collection('users').doc(targetUserId);
+  const codesRef = firestore.collection('codes');
 
   try {
     await firestore.runTransaction(async (transaction) => {
@@ -193,7 +205,65 @@ export async function manageCodeBalanceAction(
 
       const actorData = actorDoc.data() as User;
       const targetUserData = targetUserDoc.data() as User;
-      
+
+      if (actionType === 'assign') {
+        if (actorData.role === 'Admin') {
+          // ADMIN GENERATION
+          const newCodes = generateUniqueCodes(quantity);
+          for (const code of newCodes) {
+            const newCodeRef = codesRef.doc();
+            transaction.set(newCodeRef, {
+              code,
+              ownerUid: targetUserId,
+              generatedByUid: actorUid,
+              generatedAt: new Date().toISOString(),
+              status: 'available',
+            });
+          }
+          transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
+        } else {
+          // USER-TO-USER TRANSFER
+          if (actorData.codeBalance < quantity) {
+            throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
+          }
+
+          const codesToTransferQuery = codesRef.where('ownerUid', '==', actorUid).where('status', '==', 'available').limit(quantity);
+          const codesToTransferSnapshot = await transaction.get(codesToTransferQuery);
+          
+          if (codesToTransferSnapshot.docs.length < quantity) {
+            throw new Error(`Not enough available codes to transfer. Found only ${codesToTransferSnapshot.docs.length}.`);
+          }
+
+          for (const doc of codesToTransferSnapshot.docs) {
+            transaction.update(doc.ref, { ownerUid: targetUserId });
+          }
+          transaction.update(actorRef, { codeBalance: admin.firestore.FieldValue.increment(-quantity) });
+          transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
+        }
+      } else { // 'retrieve'
+        const codesToRetrieveQuery = codesRef.where('ownerUid', '==', targetUserId).where('status', '==', 'available').limit(quantity);
+        const codesToRetrieveSnapshot = await transaction.get(codesToRetrieveQuery);
+
+        if (codesToRetrieveSnapshot.docs.length < quantity) {
+          throw new Error(`Cannot retrieve ${quantity} codes. User only has ${codesToRetrieveSnapshot.docs.length} available codes.`);
+        }
+
+        if (actorData.role === 'Admin') {
+          // ADMIN DELETION
+          for (const doc of codesToRetrieveSnapshot.docs) {
+            transaction.delete(doc.ref);
+          }
+        } else {
+          // USER-TO-USER TRANSFER BACK
+          for (const doc of codesToRetrieveSnapshot.docs) {
+            transaction.update(doc.ref, { ownerUid: actorUid });
+          }
+          transaction.update(actorRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
+        }
+        transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(-quantity) });
+      }
+
+      // Log the transfer
       const transferRef = targetUserRef.collection('transfers').doc();
       const transferDetails: Omit<CodeTransfer, 'id'> = {
         type: actionType,
@@ -204,26 +274,6 @@ export async function manageCodeBalanceAction(
         quantity,
         date: new Date().toISOString(),
       };
-      
-      if (actionType === 'assign') {
-        if (actorData.role !== 'Admin') {
-            if (actorData.codeBalance < quantity) {
-                throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
-            }
-            transaction.update(actorRef, { codeBalance: actorData.codeBalance - quantity });
-        }
-        transaction.update(targetUserRef, { codeBalance: targetUserData.codeBalance + quantity });
-      } else { // retrieve
-        if (targetUserData.codeBalance < quantity) {
-            throw new Error(`Cannot retrieve ${quantity} codes. User only has ${targetUserData.codeBalance}.`);
-        }
-        transaction.update(targetUserRef, { codeBalance: targetUserData.codeBalance - quantity });
-
-        if (actorData.role !== 'Admin') {
-            transaction.update(actorRef, { codeBalance: actorData.codeBalance + quantity });
-        }
-      }
-
       transaction.set(transferRef, transferDetails);
     });
 
