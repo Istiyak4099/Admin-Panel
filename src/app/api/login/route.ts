@@ -11,7 +11,7 @@ async function ensureAdminUser(uid: string, email: string): Promise<User> {
   const userDocRef = firestore.collection('users').doc(uid);
   const userDoc = await userDocRef.get();
 
-  if (userDoc.exists()) {
+  if (userDoc.exists) {
     return userDoc.data() as User;
   }
 
