@@ -146,7 +146,7 @@ export async function deleteUserAction(
   }
 }
 
-export const ManageCodeBalanceSchema = z.object({
+const ManageCodeBalanceSchema = z.object({
   targetUserId: z.string().min(1),
   actorUid: z.string().min(1),
   quantity: z.number().int().positive({ message: "Quantity must be a positive number." }),
