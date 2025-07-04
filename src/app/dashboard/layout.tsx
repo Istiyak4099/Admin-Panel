@@ -1,5 +1,4 @@
 import React from "react";
-import Link from "next/link";
 import {
   SidebarProvider,
   Sidebar,
@@ -7,6 +6,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Button } from "@/components/ui/button";
@@ -22,16 +22,23 @@ export default function DashboardLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10 size-10 rounded-full">
-              <ShieldCheck className="size-6" />
-            </Button>
-            <div className="flex flex-col">
-              <span className="text-lg font-semibold tracking-tight text-primary">
-                LockerAdmin
-              </span>
-              <span className="text-xs text-muted-foreground">Pro</span>
+          <div className="flex w-full items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-10 rounded-full text-primary hover:bg-primary/10"
+              >
+                <ShieldCheck className="size-6" />
+              </Button>
+              <div className="flex flex-col">
+                <span className="text-lg font-semibold tracking-tight text-primary">
+                  LockerAdmin
+                </span>
+                <span className="text-xs text-muted-foreground">Pro</span>
+              </div>
             </div>
+            <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
           </div>
         </SidebarHeader>
         <SidebarContent>
