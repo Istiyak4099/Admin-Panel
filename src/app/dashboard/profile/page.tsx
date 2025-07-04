@@ -75,7 +75,7 @@ export default function ProfilePage() {
              setUser(null);
           }
         } catch (error) {
-          console.error("Error fetching user profile:", error);
+          console.warn("Warning fetching user profile:", error);
           setUser(null);
         }
       } else {

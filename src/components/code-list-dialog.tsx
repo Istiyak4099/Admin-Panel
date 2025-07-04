@@ -45,7 +45,7 @@ export function CodeListDialog({ userId, userName, children }: CodeListDialogPro
 
           setCodes(codesList);
         } catch (error) {
-          console.error("Error fetching codes:", error);
+          console.warn("Warning fetching codes:", error);
         } finally {
           setIsLoading(false);
         }

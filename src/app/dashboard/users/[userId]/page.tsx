@@ -138,7 +138,7 @@ export default function UserProfilePage() {
         setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
       } catch (error) {
-        console.error("Error fetching user profile data:", error);
+        console.warn("Warning fetching user profile data:", error);
         setUser(null);
       } finally {
         setPageLoading(false);
@@ -165,7 +165,7 @@ export default function UserProfilePage() {
             setActorProfile(null);
           }
         } catch (error) {
-          console.error("Error fetching actor profile:", error);
+          console.warn("Warning fetching actor profile:", error);
           setActorProfile(null);
         }
       } else {
@@ -274,12 +274,6 @@ export default function UserProfilePage() {
                 <p className="text-sm font-medium text-muted-foreground">Dealer Code</p>
                 <p>{user.dealerCode}</p>
               </div>
-              {user.password && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Password</p>
-                  <p className="font-semibold">{user.password}</p>
-                </div>
-              )}
             </CardContent>
             {!isSelf && (
             <CardFooter className="flex-col items-start gap-2">
