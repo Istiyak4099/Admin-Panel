@@ -26,7 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowDown, ArrowUp, ChevronRight, Trash2, LoaderCircle } from "lucide-react";
 import type { User, CodeTransfer } from "@/lib/types";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -40,10 +41,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteUserAction } from "@/app/users/actions";
+import { deleteUserAction, manageCodeBalanceAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
+const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 function UserProfileSkeleton() {
   return (
@@ -72,7 +75,7 @@ function UserProfileSkeleton() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-20 w-full" />
             </CardContent>
           </Card>
         </div>
@@ -96,12 +99,16 @@ export default function UserProfilePage() {
   const userId = params.userId as string;
   const router = useRouter();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  
+  const [deletePending, startDeleteTransition] = useTransition();
+  const [codeActionPending, startCodeActionTransition] = useTransition();
 
   const [user, setUser] = useState<User | null>(null);
+  const [actor, setActor] = useState<AuthUser | null>(null);
   const [managedUsers, setManagedUsers] = useState<User[]>([]);
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!userId || !db) {
@@ -112,20 +119,17 @@ export default function UserProfilePage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch user profile
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser({ ...userDoc.data(), uid: userDoc.id } as User);
         }
 
-        // Fetch managed users
         const managedUsersQuery = query(collection(db, "users"), where("createdByUid", "==", userId));
         const managedUsersSnapshot = await getDocs(managedUsersQuery);
         setManagedUsers(managedUsersSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
 
-        // Fetch transfer history (assuming subcollection 'transfers')
-        const transfersQuery = query(collection(db, "users", userId, "transfers"));
+        const transfersQuery = query(collection(db, "users", userId, "transfers"), orderBy("date", "desc"));
         const transfersSnapshot = await getDocs(transfersQuery);
         setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
@@ -138,10 +142,18 @@ export default function UserProfilePage() {
     };
 
     fetchData();
-  }, [userId]);
+  }, [userId, refreshKey]);
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setActor(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleDelete = () => {
-    startTransition(async () => {
+    startDeleteTransition(async () => {
       const result = await deleteUserAction({ userId });
       if (result.error) {
         toast({
@@ -155,6 +167,34 @@ export default function UserProfilePage() {
           description: `User ${user?.name} has been removed.`,
         });
         router.push("/dashboard/users");
+      }
+    });
+  };
+
+  const handleCodeManagement = (formData: FormData) => {
+    if (!actor) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to perform this action.' });
+        return;
+    }
+
+    const quantity = Number(formData.get('quantity'));
+    const actionType = formData.get('actionType') as 'assign' | 'retrieve';
+    
+    startCodeActionTransition(async () => {
+      const result = await manageCodeBalanceAction({
+        targetUserId: userId,
+        actorUid: actor.uid,
+        quantity,
+        actionType,
+      });
+
+      if (result.error) {
+        toast({ variant: "destructive", title: "Action Failed", description: result.error });
+      } else {
+        toast({ title: "Success", description: result.success });
+        setRefreshKey(prev => prev + 1); // Trigger refetch
+        const form = document.getElementById('code-management-form') as HTMLFormElement;
+        form?.reset();
       }
     });
   };
@@ -173,6 +213,8 @@ export default function UserProfilePage() {
       </div>
     );
   }
+
+  const isSelf = actor?.uid === user.uid;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -212,6 +254,7 @@ export default function UserProfilePage() {
                 </div>
               )}
             </CardContent>
+            {!isSelf && (
             <CardFooter className="flex-col items-start gap-2">
                  <Button variant="outline" className="w-full">Reset Password</Button>
                   <AlertDialog>
@@ -230,9 +273,9 @@ export default function UserProfilePage() {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={isPending} className="bg-destructive hover:bg-destructive/90">
-                          {isPending ? (
+                        <AlertDialogCancel disabled={deletePending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={deletePending} className="bg-destructive hover:bg-destructive/90">
+                          {deletePending ? (
                             <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                           ) : null}
                           Continue
@@ -241,6 +284,7 @@ export default function UserProfilePage() {
                     </AlertDialogContent>
                   </AlertDialog>
             </CardFooter>
+            )}
           </Card>
 
           <Card className="lg:col-span-2">
@@ -248,7 +292,7 @@ export default function UserProfilePage() {
               <CardTitle>Code Management</CardTitle>
               <CardDescription>Assign or retrieve codes from this user.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
                 <div className="flex items-center space-x-4 rounded-md border p-4">
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">
@@ -260,14 +304,24 @@ export default function UserProfilePage() {
                   </div>
                   <p className="text-2xl font-bold">{user.codeBalance}</p>
                 </div>
-                 <div className="space-y-2">
+                {!isSelf && (
+                 <form id="code-management-form" action={handleCodeManagement} className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>
-                  <div className="flex gap-2">
-                    <Input id="code-quantity" type="number" placeholder="e.g., 100" />
-                    <Button><ArrowDown className="mr-2 h-4 w-4" /> Assign</Button>
-                    <Button variant="outline"><ArrowUp className="mr-2 h-4 w-4" /> Retrieve</Button>
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <Input id="code-quantity" name="quantity" type="number" placeholder="e.g., 100" min="1" required />
+                    </div>
+                    <Button type="submit" name="actionType" value="assign" disabled={codeActionPending}>
+                      {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowDown />}
+                       <span className="hidden sm:inline ml-2">Assign</span>
+                    </Button>
+                    <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending}>
+                      {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
+                       <span className="hidden sm:inline ml-2">Retrieve</span>
+                    </Button>
                   </div>
-                </div>
+                </form>
+                )}
             </CardContent>
           </Card>
         </div>
@@ -298,7 +352,7 @@ export default function UserProfilePage() {
                                     <TableCell>{transfer.from}</TableCell>
                                     <TableCell>{transfer.to}</TableCell>
                                     <TableCell>{transfer.quantity}</TableCell>
-                                    <TableCell>{transfer.date}</TableCell>
+                                    <TableCell>{format(new Date(transfer.date), "PPP p")}</TableCell>
                                 </TableRow>
                             ))
                         ) : (

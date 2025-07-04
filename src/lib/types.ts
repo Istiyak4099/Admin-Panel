@@ -13,8 +13,10 @@ export type Locker = {
 
 export type CodeTransfer = {
   id: string;
-  from: string; // User's name
-  to: string; // User's name
+  from: string; // From User's name
+  to: string; // To User's name
+  fromUid: string; // From User's UID
+  toUid: string; // To User's UID
   quantity: number;
   date: string;
   type: "assigned" | "retrieved";

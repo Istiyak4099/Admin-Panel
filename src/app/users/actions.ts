@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import type { User, UserRole } from '@/lib/types';
+import type { User, UserRole, CodeTransfer } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
@@ -124,24 +124,13 @@ export async function deleteUserAction(
   const { userId } = validatedFields.data;
 
   try {
-    // 1. Delete user from Firebase Authentication. This revokes their access.
     await admin.auth().deleteUser(userId);
-    
-    // 2. Delete user's document from Firestore.
     const userDocRef = firestore.collection('users').doc(userId);
     await userDocRef.delete();
-
-    // 3. (Optional but good practice) In a real app, you would also delete all data created by this user.
-    // This is a complex operation and is omitted here for simplicity, but it's crucial for data integrity.
-    // For example: query all documents where `createdByUid` === userId and delete them.
-
     console.log(`Successfully deleted user ${userId} from Auth and Firestore.`);
-    
     return { success: true };
   } catch (e: any) {
     console.error('Delete User Action Error:', e);
-    // If auth user doesn't exist, they can't log in anyway.
-    // Still try to delete from firestore as a cleanup step.
     if (e.code === 'auth/user-not-found') {
         try {
             const userDocRef = firestore.collection('users').doc(userId);
@@ -153,6 +142,95 @@ export async function deleteUserAction(
              return { error: fsError.message || 'An unexpected error occurred while deleting from Firestore.' };
         }
     }
+    return { error: e.message || 'An unexpected error occurred.' };
+  }
+}
+
+export const ManageCodeBalanceSchema = z.object({
+  targetUserId: z.string().min(1),
+  actorUid: z.string().min(1),
+  quantity: z.number().int().positive({ message: "Quantity must be a positive number." }),
+  actionType: z.enum(['assign', 'retrieve']),
+});
+
+export interface ManageCodeBalanceState {
+  success?: string;
+  error?: string | null;
+}
+
+export async function manageCodeBalanceAction(
+  data: z.infer<typeof ManageCodeBalanceSchema>
+): Promise<ManageCodeBalanceState> {
+  if (!firestore) {
+    return { error: serverConfigError };
+  }
+
+  const validatedFields = ManageCodeBalanceSchema.safeParse(data);
+
+  if (!validatedFields.success) {
+    const errors = validatedFields.error.flatten().fieldErrors;
+    const firstError = Object.values(errors).flat()[0];
+    return { error: firstError || 'Invalid input.' };
+  }
+
+  const { targetUserId, actorUid, quantity, actionType } = validatedFields.data;
+
+  if (targetUserId === actorUid) {
+      return { error: "You cannot transfer codes to yourself." };
+  }
+
+  const actorRef = firestore.collection('users').doc(actorUid);
+  const targetUserRef = firestore.collection('users').doc(targetUserId);
+  const transferRef = targetUserRef.collection('transfers').doc();
+
+  try {
+    await firestore.runTransaction(async (transaction) => {
+      const actorDoc = await transaction.get(actorRef);
+      const targetUserDoc = await transaction.get(targetUserRef);
+
+      if (!actorDoc.exists || !targetUserDoc.exists) {
+        throw new Error("One or both users not found.");
+      }
+
+      const actorData = actorDoc.data() as User;
+      const targetUserData = targetUserDoc.data() as User;
+      
+      if (actionType === 'assign') {
+        if (actorData.role !== 'Admin' && actorData.codeBalance < quantity) {
+            throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
+        }
+        const newActorBalance = actorData.role === 'Admin' ? actorData.codeBalance : actorData.codeBalance - quantity;
+        const newTargetBalance = targetUserData.codeBalance + quantity;
+        
+        transaction.update(actorRef, { codeBalance: newActorBalance });
+        transaction.update(targetUserRef, { codeBalance: newTargetBalance });
+      } else { // retrieve
+        if (targetUserData.codeBalance < quantity) {
+            throw new Error(`Cannot retrieve ${quantity} codes. User only has ${targetUserData.codeBalance}.`);
+        }
+        const newTargetBalance = targetUserData.codeBalance - quantity;
+        const newActorBalance = actorData.role === 'Admin' ? actorData.codeBalance : actorData.codeBalance + quantity;
+
+        transaction.update(targetUserRef, { codeBalance: newTargetBalance });
+        transaction.update(actorRef, { codeBalance: newActorBalance });
+      }
+
+      const newTransfer: Omit<CodeTransfer, 'id'> = {
+        type: actionType,
+        from: actionType === 'assign' ? actorData.name : targetUserData.name,
+        to: actionType === 'assign' ? targetUserData.name : actorData.name,
+        fromUid: actionType === 'assign' ? actorData.uid : targetUserData.uid,
+        toUid: actionType === 'assign' ? targetUserData.uid : actorData.uid,
+        quantity,
+        date: new Date().toISOString(),
+      };
+
+      transaction.set(transferRef, newTransfer);
+    });
+
+    return { success: `Successfully ${actionType === 'assign' ? 'assigned' : 'retrieved'} ${quantity} codes.` };
+  } catch (e: any) {
+    console.error('Manage Code Balance Action Error:', e);
     return { error: e.message || 'An unexpected error occurred.' };
   }
 }
