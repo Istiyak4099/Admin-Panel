@@ -1,11 +1,13 @@
-import { LoginForm } from '@/components/login-form';
+import { LoginHub } from '@/components/login-hub';
 
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm">
-        <LoginForm />
+      <div className="mb-8 text-center">
+         <h1 className="text-4xl font-bold tracking-tight text-primary">LockerAdmin Pro</h1>
+         <p className="text-muted-foreground">Please select your login method</p>
       </div>
+      <LoginHub />
        {process.env.NODE_ENV === 'development' && (
         <div className="absolute bottom-4 left-4 rounded-md border bg-muted p-3 text-xs text-muted-foreground shadow-lg">
           <p className="font-bold">Firebase Studio Diagnostic:</p>
@@ -16,9 +18,6 @@ export default function LoginPage() {
                 'NOT SET! Please check your .env file.'}
             </code>
           </p>
-          <p className="mt-2 font-bold">Default Admin Credentials:</p>
-          <p>Email: <code className="font-mono">admin@lockersystem.com</code></p>
-          <p>Password: <code className="font-mono">admin123</code></p>
         </div>
       )}
     </div>
