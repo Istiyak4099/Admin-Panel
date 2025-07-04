@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const userDocRef = firestore.collection('Users').doc(uid);
     const userDoc = await userDocRef.get();
 
-    if (!userDoc.exists()) {
+    if (!userDoc.exists) {
         console.log(`Admin user profile not found in Firestore for UID ${uid}, creating...`);
         const adminUserData: User = {
             uid,
