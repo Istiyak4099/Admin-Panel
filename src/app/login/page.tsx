@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, Users, FileText } from 'lucide-react';
+import { GoogleSignInButton } from '@/components/auth-components';
 
 export default function LoginPage() {
   return (
@@ -28,9 +29,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto flex flex-col items-center">
-            <Button asChild className="w-full bg-red-600 text-white hover:bg-red-700">
-              <Link href="/credentials-login?role=Admin">Admin Login</Link>
-            </Button>
+            <GoogleSignInButton />
           </CardContent>
         </Card>
 
