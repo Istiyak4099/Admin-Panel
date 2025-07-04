@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Standard user login flow
-    const usersRef = firestore.collection('Users');
+    const usersRef = firestore.collection('users');
     const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
 
     if (snapshot.empty) {
