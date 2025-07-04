@@ -18,8 +18,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mobile number and password are required' }, { status: 400 });
     }
 
-    // Standard user login flow
     const usersRef = firestore.collection('users');
+
+    // Special case for master admin credentials to ensure an admin can always be created.
+    if (mobileNumber === '0000000000' && password === 'password') {
+        let masterAdminSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
+        if (masterAdminSnapshot.empty) {
+            console.log("Master admin credentials used for first time. Creating default admin user.");
+            
+            const hashedPassword = await bcrypt.hash(password, 10);
+            
+            // Create user in Firebase Auth
+            const userRecord = await admin.auth().createUser({
+                email: 'admin@emilocker.system',
+                displayName: 'Default Admin',
+            });
+            const uid = userRecord.uid;
+
+            // Create user document in Firestore
+            const adminUserData: Omit<User, 'password'> & { password?: string } = {
+                uid,
+                name: 'Default Admin',
+                email: 'admin@emilocker.system',
+                mobileNumber,
+                password, // Store plain text for visibility as per existing app logic
+                hashedPassword,
+                role: 'Admin',
+                createdAt: new Date().toISOString(),
+                status: 'active',
+                createdByUid: null,
+                lockerId: null,
+                address: 'System HQ',
+                shopName: 'Admin Control',
+                dealerCode: 'ROOT',
+                codeBalance: 99999, // Admins can generate infinite codes
+            };
+            
+            await usersRef.doc(uid).set(adminUserData);
+            console.log("Default Admin user created successfully with UID:", uid);
+        }
+    }
+
+    // Standard user login flow
     const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
 
     if (snapshot.empty) {
@@ -44,6 +84,8 @@ export async function POST(req: NextRequest) {
       await admin.auth().getUser(userData.uid);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
+        // This case handles users that exist in Firestore but not in Auth.
+        // It's a fallback to ensure system integrity.
         await admin.auth().createUser({
           uid: userData.uid,
           email: userData.email,
