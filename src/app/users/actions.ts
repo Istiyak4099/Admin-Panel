@@ -227,35 +227,40 @@ export async function manageCodeBalanceAction(
             throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
           }
 
-          const codesToTransferQuery = codesRef.where('ownerUid', '==', actorUid).where('status', '==', 'available').limit(quantity);
-          const codesToTransferSnapshot = await transaction.get(codesToTransferQuery);
-          
-          if (codesToTransferSnapshot.docs.length < quantity) {
-            throw new Error(`Not enough available codes to transfer. Found only ${codesToTransferSnapshot.docs.length}.`);
+          const allCodesOwnedByActorQuery = codesRef.where('ownerUid', '==', actorUid);
+          const allCodesOwnedByActorSnapshot = await transaction.get(allCodesOwnedByActorQuery);
+          const availableCodes = allCodesOwnedByActorSnapshot.docs.filter(doc => doc.data().status === 'available');
+
+          if (availableCodes.length < quantity) {
+            throw new Error(`Not enough available codes to transfer. Found only ${availableCodes.length}.`);
           }
 
-          for (const doc of codesToTransferSnapshot.docs) {
+          const codesToTransfer = availableCodes.slice(0, quantity);
+          for (const doc of codesToTransfer) {
             transaction.update(doc.ref, { ownerUid: targetUserId });
           }
           transaction.update(actorRef, { codeBalance: admin.firestore.FieldValue.increment(-quantity) });
           transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
         }
       } else { // 'retrieve'
-        const codesToRetrieveQuery = codesRef.where('ownerUid', '==', targetUserId).where('status', '==', 'available').limit(quantity);
-        const codesToRetrieveSnapshot = await transaction.get(codesToRetrieveQuery);
+        const allCodesOwnedByUserQuery = codesRef.where('ownerUid', '==', targetUserId);
+        const allCodesOwnedByUserSnapshot = await transaction.get(allCodesOwnedByUserQuery);
+        const availableCodes = allCodesOwnedByUserSnapshot.docs.filter(doc => doc.data().status === 'available');
 
-        if (codesToRetrieveSnapshot.docs.length < quantity) {
-          throw new Error(`Cannot retrieve ${quantity} codes. User only has ${codesToRetrieveSnapshot.docs.length} available codes.`);
+        if (availableCodes.length < quantity) {
+          throw new Error(`Cannot retrieve ${quantity} codes. User only has ${availableCodes.length} available codes.`);
         }
+        
+        const codesToProcess = availableCodes.slice(0, quantity);
 
         if (actorData.role === 'Admin') {
           // ADMIN DELETION
-          for (const doc of codesToRetrieveSnapshot.docs) {
+          for (const doc of codesToProcess) {
             transaction.delete(doc.ref);
           }
         } else {
           // USER-TO-USER TRANSFER BACK
-          for (const doc of codesToRetrieveSnapshot.docs) {
+          for (const doc of codesToProcess) {
             transaction.update(doc.ref, { ownerUid: actorUid });
           }
           transaction.update(actorRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });

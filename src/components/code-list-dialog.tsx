@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { firebaseApp } from '@/lib/firebase-client';
-import { getFirestore, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import type { GeneratedCode } from '@/lib/types';
 import { LoaderCircle } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
@@ -35,9 +35,14 @@ export function CodeListDialog({ userId, userName, children }: CodeListDialogPro
       const fetchCodes = async () => {
         setIsLoading(true);
         try {
-          const codesQuery = query(collection(db, 'codes'), where('ownerUid', '==', userId), orderBy('generatedAt', 'desc'));
+          // Querying without ordering to avoid composite index requirement.
+          const codesQuery = query(collection(db, 'codes'), where('ownerUid', '==', userId));
           const querySnapshot = await getDocs(codesQuery);
           const codesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GeneratedCode));
+          
+          // Sorting on the client-side.
+          codesList.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+
           setCodes(codesList);
         } catch (error) {
           console.error("Error fetching codes:", error);
