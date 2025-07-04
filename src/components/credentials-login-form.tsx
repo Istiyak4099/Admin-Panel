@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,8 @@ const firebaseConfigError = "Firebase client configuration is invalid or missing
 
 export function CredentialsLoginForm() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const role = searchParams.get('role') || 'User';
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -62,7 +65,7 @@ export function CredentialsLoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>User Login</CardTitle>
+        <CardTitle>{role} Login</CardTitle>
         <CardDescription>Enter your mobile number and password to sign in.</CardDescription>
       </CardHeader>
       <CardContent>

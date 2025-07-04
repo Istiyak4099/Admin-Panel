@@ -1,102 +1,129 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithCustomToken } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LoaderCircle, ShieldCheck, Users } from 'lucide-react';
+import { LoaderCircle, Shield, Users, FileText } from 'lucide-react';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 export function LoginHub() {
   const { toast } = useToast();
-  const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start true to check for redirect
+
+  useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
+
+    const processRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          setIsLoading(true);
+          toast({ title: "Authenticating..." });
+          const idToken = await result.user.getIdToken();
+
+          const response = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${idToken}`,
+            },
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Admin authentication failed.');
+          }
+
+          await signInWithCustomToken(auth, data.customToken);
+
+          toast({ title: 'Admin login successful!' });
+          window.location.href = '/dashboard';
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error: any) {
+        console.error("Login redirect processing error:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: error.message || 'An unexpected error occurred during login.',
+        });
+        setIsLoading(false);
+      }
+    };
+
+    processRedirect();
+  }, [toast]);
+
 
   const handleAdminLogin = async () => {
-    setIsAdminLoading(true);
     if (!auth) {
       toast({
         variant: 'destructive',
         title: 'Firebase Not Configured',
-        description: 'The app is not connected to Firebase. Please check the environment variables.',
+        description: 'The app is not connected to Firebase.',
       });
-      setIsAdminLoading(false);
       return;
     }
-
-    try {
-      const response = await fetch('/api/auth/google', {
-        method: 'POST',
-      });
-      
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to authenticate admin.');
-      }
-
-      await signInWithCustomToken(auth, data.customToken);
-
-      toast({ title: 'Admin login successful!' });
-      window.location.href = '/dashboard';
-    } catch (error: any) {
-      console.error("Admin login error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Admin Login Failed',
-        description: error.message || 'An unexpected server error occurred.',
-      });
-      setIsAdminLoading(false);
-    }
+    setIsLoading(true);
+    const provider = new GoogleAuthProvider();
+    await signInWithRedirect(auth, provider);
   };
 
   return (
-    <div className="grid w-full max-w-4xl gap-6 md:grid-cols-2">
-      <Card>
-        <CardHeader className="text-center">
-          <ShieldCheck className="mx-auto h-12 w-12 text-primary" />
-          <CardTitle>Admin Panel</CardTitle>
-          <CardDescription>For system administrators only.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-center text-sm text-muted-foreground">
-            Click the button below for one-click access to the admin dashboard.
-          </p>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={handleAdminLogin} className="w-full" disabled={isAdminLoading || !auth}>
-            {isAdminLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Enter Admin Panel
-          </Button>
-        </CardFooter>
-      </Card>
-      <Card>
-        <CardHeader className="text-center">
-          <Users className="mx-auto h-12 w-12 text-primary" />
-          <CardTitle>User Panel</CardTitle>
-          <CardDescription>For Distributors and Retailers.</CardDescription>
-        </CardHeader>
-        <CardContent>
-           <p className="text-center text-sm text-muted-foreground">
-            Use your registered mobile number and password to sign in to your panel.
-          </p>
-        </CardContent>
-        <CardFooter>
-            <Button asChild className="w-full">
-                <Link href="/credentials-login">User Login</Link>
-            </Button>
-        </CardFooter>
-      </Card>
+    <div className="grid w-full max-w-5xl gap-8 md:grid-cols-3">
+        <Card className="border-red-500/20 bg-red-50/50 dark:bg-red-900/10">
+            <CardHeader className="text-center items-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+                    <Shield className="h-8 w-8" />
+                </div>
+                <CardTitle className="pt-2">Admin Panel</CardTitle>
+                <CardDescription>Full system access and management</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={handleAdminLogin} className="w-full bg-red-500 hover:bg-red-600 text-white" disabled={isLoading}>
+                    {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                    Admin Panel
+                </Button>
+            </CardContent>
+        </Card>
+        
+        <Card className="border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10">
+            <CardHeader className="text-center items-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+                    <Users className="h-8 w-8" />
+                </div>
+                <CardTitle className="pt-2">Super Login</CardTitle>
+                <CardDescription>Super distributor management access</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full bg-blue-500 hover:bg-blue-600 text-white" disabled={isLoading}>
+                    <Link href="/credentials-login?role=Super Login">Super Login</Link>
+                </Button>
+            </CardContent>
+        </Card>
+        
+        <Card className="border-green-500/20 bg-green-50/50 dark:bg-green-900/10">
+            <CardHeader className="text-center items-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10 text-green-500">
+                    <FileText className="h-8 w-8" />
+                </div>
+                <CardTitle className="pt-2">Distributor Login</CardTitle>
+                <CardDescription>Distributor and retailer management</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full bg-green-500 hover:bg-green-600 text-white" disabled={isLoading}>
+                    <Link href="/credentials-login?role=Distributor Login">Distributor Login</Link>
+                </Button>
+            </CardContent>
+        </Card>
     </div>
   );
 }
