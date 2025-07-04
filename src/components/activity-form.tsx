@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useActionState } from "react";
 import {
   Card,
   CardContent,
@@ -32,7 +33,7 @@ function SubmitButton() {
 
 export function ActivityForm() {
   const initialState: AnalyzeLogsState = { summary: "", error: null };
-  const [state, formAction] = useFormState(analyzeLogsAction, initialState);
+  const [state, formAction] = useActionState(analyzeLogsAction, initialState);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
