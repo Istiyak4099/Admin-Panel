@@ -3,20 +3,40 @@ import admin from 'firebase-admin';
 import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import type { User } from '@/lib/types';
 
+const ADMIN_EMAIL = 'admin@lockersystem.com';
+const ADMIN_PASSWORD = 'admin123';
+
+async function getOrCreateAdminAuthUser(): Promise<admin.auth.UserRecord> {
+  try {
+    const userRecord = await admin.auth().getUserByEmail(ADMIN_EMAIL);
+    return userRecord;
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found') {
+      console.log('Admin user not found in Auth, creating a new one...');
+      const userRecord = await admin.auth().createUser({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+        displayName: 'Admin',
+      });
+      console.log('Successfully created new admin user in Auth:', userRecord.uid);
+      return userRecord;
+    }
+    throw error;
+  }
+}
+
 async function ensureAdminUserInFirestore(uid: string, email: string, name: string): Promise<void> {
   if (!firestore) {
-    // This check prevents operations if the Admin SDK is not initialized.
     throw new Error(serverConfigError);
   }
-  const userDocRef = firestore.collection('users').doc(uid);
+  const userDocRef = firestore.collection('Users').doc(uid);
   const userDoc = await userDocRef.get();
 
-  // If user already exists, we don't need to do anything.
   if (userDoc.exists) {
     return;
   }
   
-  // Create the admin user document in Firestore if it's their first time.
+  console.log(`Admin user document not found in Firestore for UID ${uid}, creating it...`);
   const adminUserData: User = {
     uid,
     name: name || 'Admin',
@@ -30,6 +50,7 @@ async function ensureAdminUserInFirestore(uid: string, email: string, name: stri
     shopName: 'Admin Panel',
     dealerCode: 'ADMIN',
     codeBalance: 99999,
+    mobileNumber: '0000000000',
   };
 
   await userDocRef.set(adminUserData);
@@ -37,36 +58,26 @@ async function ensureAdminUserInFirestore(uid: string, email: string, name: stri
 }
 
 export async function POST(req: NextRequest) {
-  // Centralized check for Firebase Admin SDK initialization.
   if (!admin.apps.length || !firestore) {
-    console.error("Google Auth API Error:", serverConfigError);
+    console.error("Admin Login API Error:", serverConfigError);
     return NextResponse.json({ error: serverConfigError }, { status: 500 });
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 });
-    }
-    const idToken = authHeader.split('Bearer ')[1];
-
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const { uid, email, name } = decodedToken;
+    const adminUser = await getOrCreateAdminAuthUser();
+    const { uid, email, displayName } = adminUser;
 
     if (!email) {
-        return NextResponse.json({ error: 'Email not found in token' }, { status: 400 });
+        return NextResponse.json({ error: 'Admin email is missing.' }, { status: 500 });
     }
 
-    // Ensure the user document exists in Firestore.
-    await ensureAdminUserInFirestore(uid, email, name || '');
+    await ensureAdminUserInFirestore(uid, email, displayName || 'Admin');
 
-    // The user is authenticated. Create a custom token for our session management.
     const customToken = await admin.auth().createCustomToken(uid);
 
     return NextResponse.json({ customToken });
   } catch (error) {
-    console.error('Google Auth API critical error:', error);
-    // Return a specific error message if it's the known config error.
+    console.error('Admin Login API critical error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

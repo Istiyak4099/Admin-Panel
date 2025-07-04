@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,7 +35,18 @@ export function LoginHub() {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, 'admin@lockersystem.com', 'admin123');
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to authenticate admin.');
+      }
+
+      await signInWithCustomToken(auth, data.customToken);
+
       toast({ title: 'Admin login successful!' });
       window.location.href = '/dashboard';
     } catch (error: any) {
@@ -43,7 +54,7 @@ export function LoginHub() {
       toast({
         variant: 'destructive',
         title: 'Admin Login Failed',
-        description: 'Please ensure the admin user (admin@lockersystem.com) exists in Firebase Authentication and has the correct password (admin123).',
+        description: error.message || 'An unexpected server error occurred.',
       });
       setIsAdminLoading(false);
     }
