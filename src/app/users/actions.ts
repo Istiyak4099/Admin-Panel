@@ -181,7 +181,6 @@ export async function manageCodeBalanceAction(
 
   const actorRef = firestore.collection('users').doc(actorUid);
   const targetUserRef = firestore.collection('users').doc(targetUserId);
-  const transferRef = targetUserRef.collection('transfers').doc();
 
   try {
     await firestore.runTransaction(async (transaction) => {
@@ -195,37 +194,37 @@ export async function manageCodeBalanceAction(
       const actorData = actorDoc.data() as User;
       const targetUserData = targetUserDoc.data() as User;
       
+      const transferRef = targetUserRef.collection('transfers').doc();
+      const transferDetails: Omit<CodeTransfer, 'id'> = {
+        type: actionType,
+        from: actionType === 'assign' ? actorData.name : targetUserData.name,
+        to: actionType === 'assign' ? targetUserData.name : actorData.name,
+        fromUid: actorUid,
+        toUid: targetUserId,
+        quantity,
+        date: new Date().toISOString(),
+      };
+      
       if (actionType === 'assign') {
-        if (actorData.role !== 'Admin' && actorData.codeBalance < quantity) {
-            throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
+        if (actorData.role !== 'Admin') {
+            if (actorData.codeBalance < quantity) {
+                throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
+            }
+            transaction.update(actorRef, { codeBalance: actorData.codeBalance - quantity });
         }
-        const newActorBalance = actorData.role === 'Admin' ? actorData.codeBalance : actorData.codeBalance - quantity;
-        const newTargetBalance = targetUserData.codeBalance + quantity;
-        
-        transaction.update(actorRef, { codeBalance: newActorBalance });
-        transaction.update(targetUserRef, { codeBalance: newTargetBalance });
+        transaction.update(targetUserRef, { codeBalance: targetUserData.codeBalance + quantity });
       } else { // retrieve
         if (targetUserData.codeBalance < quantity) {
             throw new Error(`Cannot retrieve ${quantity} codes. User only has ${targetUserData.codeBalance}.`);
         }
-        const newTargetBalance = targetUserData.codeBalance - quantity;
-        const newActorBalance = actorData.role === 'Admin' ? actorData.codeBalance : actorData.codeBalance + quantity;
+        transaction.update(targetUserRef, { codeBalance: targetUserData.codeBalance - quantity });
 
-        transaction.update(targetUserRef, { codeBalance: newTargetBalance });
-        transaction.update(actorRef, { codeBalance: newActorBalance });
+        if (actorData.role !== 'Admin') {
+            transaction.update(actorRef, { codeBalance: actorData.codeBalance + quantity });
+        }
       }
 
-      const newTransfer: Omit<CodeTransfer, 'id'> = {
-        type: actionType,
-        from: actionType === 'assign' ? actorData.name : targetUserData.name,
-        to: actionType === 'assign' ? targetUserData.name : actorData.name,
-        fromUid: actionType === 'assign' ? actorData.uid : targetUserData.uid,
-        toUid: actionType === 'assign' ? targetUserData.uid : actorData.uid,
-        quantity,
-        date: new Date().toISOString(),
-      };
-
-      transaction.set(transferRef, newTransfer);
+      transaction.set(transferRef, transferDetails);
     });
 
     return { success: `Successfully ${actionType === 'assign' ? 'assigned' : 'retrieved'} ${quantity} codes.` };

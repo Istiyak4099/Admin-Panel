@@ -339,9 +339,9 @@ export default function UserProfilePage() {
                   <p className="text-2xl font-bold">{user.codeBalance}</p>
                 </div>
                 {!isSelf && (
-                 <form id="code-management-form" action={handleCodeManagement} className="mt-4 space-y-2">
+                 <form action={handleCodeManagement} className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-2">
                     <Input 
                       id="code-quantity" 
                       name="quantity" 
