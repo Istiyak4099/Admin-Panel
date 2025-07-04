@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,55 +13,7 @@ const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 export function LoginHub() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true); // Start true to check for redirect
-
-  useEffect(() => {
-    if (!auth) {
-      setIsLoading(false);
-      return;
-    }
-
-    const processRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          setIsLoading(true);
-          toast({ title: "Authenticating..." });
-          const idToken = await result.user.getIdToken();
-
-          const response = await fetch('/api/auth/google', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${idToken}`,
-            },
-          });
-
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || 'Admin authentication failed.');
-          }
-
-          await signInWithCustomToken(auth, data.customToken);
-
-          toast({ title: 'Admin login successful!' });
-          window.location.href = '/dashboard';
-        } else {
-          setIsLoading(false);
-        }
-      } catch (error: any) {
-        console.error("Login redirect processing error:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: error.message || 'An unexpected error occurred during login.',
-        });
-        setIsLoading(false);
-      }
-    };
-
-    processRedirect();
-  }, [toast]);
-
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAdminLogin = async () => {
     if (!auth) {
@@ -73,8 +25,31 @@ export function LoginHub() {
       return;
     }
     setIsLoading(true);
-    const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+    toast({ title: 'Signing in as Admin...' });
+
+    try {
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Admin login failed.');
+      }
+
+      await signInWithCustomToken(auth, data.customToken);
+
+      toast({ title: 'Admin login successful!' });
+      window.location.href = '/dashboard';
+    } catch (error: any) {
+      console.error("Admin login error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Admin Login Failed',
+        description: error.message || 'An unexpected error occurred.',
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
