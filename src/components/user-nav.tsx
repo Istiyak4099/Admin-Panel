@@ -1,4 +1,3 @@
-
 'use client';
 
 import { getAuth, signOut, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
@@ -29,7 +28,7 @@ async function ensureAdminUserInFirestore(uid: string, email: string, name: stri
     throw new Error("Firestore is not initialized.");
   }
   const userDocRef = doc(db, 'Users', uid);
-  const userDoc = await userDocRef.get();
+  const userDoc = await getDoc(userDocRef);
 
   if (userDoc.exists()) {
     return userDoc.data() as User;
