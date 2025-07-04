@@ -11,8 +11,13 @@ const firebaseConfig = {
 
 let firebaseApp: FirebaseApp | null = null;
 
-// A simple check to see if the values look like they've been replaced.
-const isConfigProvided = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('YOUR_API_KEY_HERE');
+// A more robust check to ensure all necessary config values are present.
+const isConfigProvided =
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  !firebaseConfig.apiKey.includes('YOUR_API_KEY_HERE');
+
 
 if (isConfigProvided) {
     if (!getApps().length) {
@@ -23,7 +28,7 @@ if (isConfigProvided) {
 } else {
     // This will help in debugging by showing a clear message in the browser console.
     if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        console.warn("Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.");
+        console.error("Firebase client configuration is invalid or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_* variables are correctly populated in your .env file.");
     }
 }
 
