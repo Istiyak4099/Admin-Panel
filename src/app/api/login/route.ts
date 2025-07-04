@@ -1,3 +1,4 @@
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { firestore, serverConfigError } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
@@ -8,7 +9,7 @@ async function ensureAdminUserExists(uid: string, email: string): Promise<void> 
   if (!firestore) {
     throw new Error(serverConfigError);
   }
-  const userDocRef = firestore.collection('users').doc(uid);
+  const userDocRef = firestore.collection('Users').doc(uid);
   const userDoc = await userDocRef.get();
 
   if (userDoc.exists) {
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Standard user login flow
-    const usersRef = firestore.collection('users');
+    const usersRef = firestore.collection('Users');
     const snapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
 
     if (snapshot.empty) {
