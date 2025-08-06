@@ -127,15 +127,18 @@ export default function UserProfilePage() {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser({ ...userDoc.data(), uid: userDoc.id } as User);
+
+          const managedUsersQuery = query(collection(db, "users"), where("createdByUid", "==", userId));
+          const managedUsersSnapshot = await getDocs(managedUsersQuery);
+          setManagedUsers(managedUsersSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
+
+          const transfersQuery = query(collection(db, "users", userId, "transfers"), orderBy("date", "desc"));
+          const transfersSnapshot = await getDocs(transfersQuery);
+          setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
+
+        } else {
+            setUser(null);
         }
-
-        const managedUsersQuery = query(collection(db, "users"), where("createdByUid", "==", userId));
-        const managedUsersSnapshot = await getDocs(managedUsersQuery);
-        setManagedUsers(managedUsersSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
-
-        const transfersQuery = query(collection(db, "users", userId, "transfers"), orderBy("date", "desc"));
-        const transfersSnapshot = await getDocs(transfersQuery);
-        setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
       } catch (error) {
         console.warn("Warning fetching user profile data:", error);
