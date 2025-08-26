@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mobile number and password are required' }, { status: 400 });
     }
 
-    const usersRef = firestore.collection('users');
+    const usersRef = firestore.collection('Dealers');
 
     // Special case for master admin credentials to ensure an admin can always be created.
     if (mobileNumber === '01317041181' && password === 'amijanina420') {
@@ -30,16 +30,16 @@ export async function POST(req: NextRequest) {
             
             // Create user in Firebase Auth
             const userRecord = await admin.auth().createUser({
-                email: 'admin@emilocker.system',
-                displayName: 'Default Admin',
+                email: 'abdulhadiistiyak@gmail.com',
+                displayName: 'Istiyak',
             });
             const uid = userRecord.uid;
 
             // Create user document in Firestore
             const adminUserData: Omit<User, 'password'> & { password?: string } = {
                 uid,
-                name: 'Default Admin',
-                email: 'admin@emilocker.system',
+                name: 'Istiyak',
+                email: 'abdulhadiistiyak@gmail.com',
                 mobileNumber,
                 password, // Store plain text for visibility as per existing app logic
                 hashedPassword,
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
                 status: 'active',
                 createdByUid: null,
                 lockerId: null,
-                address: 'System HQ',
+                address: 'dhaka',
                 shopName: 'Admin Control',
                 dealerCode: 'ROOT',
                 codeBalance: 99999, // Admins can generate infinite codes
