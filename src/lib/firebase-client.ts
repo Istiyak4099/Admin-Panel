@@ -1,35 +1,22 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 
+// This configuration is for the Firebase project: retailer-emi-assist-kiwfo
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_IS_PRIVATE_AND_SHOULD_NOT_BE_SHARED",
+  apiKey: "AIzaSyDzfjJoXHXUxBxV8vQidAz7oFCEy5CSJTI",
   authDomain: "retailer-emi-assist-kiwfo.firebaseapp.com",
   projectId: "retailer-emi-assist-kiwfo",
   storageBucket: "retailer-emi-assist-kiwfo.appspot.com",
-  messagingSenderId: "108152427958",
-  appId: "1:108152427958:web:b1d796791924b6c4f0b224"
+  messagingSenderId: "167466574794",
+  appId: "1:167466574794:web:07102b06a5d2478c4ae533"
 };
 
 let firebaseApp: FirebaseApp | null = null;
 
-// A more robust check to ensure all necessary config values are present.
-const isConfigProvided =
-  firebaseConfig.apiKey &&
-  firebaseConfig.authDomain &&
-  firebaseConfig.projectId &&
-  !firebaseConfig.apiKey.includes('YOUR_API_KEY');
-
-
-if (isConfigProvided) {
-    if (!getApps().length) {
-        firebaseApp = initializeApp(firebaseConfig);
-    } else {
-        firebaseApp = getApp();
-    }
+// Initialize Firebase
+if (!getApps().length) {
+    firebaseApp = initializeApp(firebaseConfig);
 } else {
-    // This will help in debugging by showing a clear message in the browser console.
-    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        console.error("Firebase client configuration is invalid or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_* variables are correctly populated in your .env file.");
-    }
+    firebaseApp = getApp();
 }
 
 export { firebaseApp };
