@@ -2,8 +2,6 @@ import admin from 'firebase-admin';
 import type { firestore as AdminFirestore } from 'firebase-admin';
 
 // This file initializes the Firebase Admin SDK for server-side operations.
-// It will not throw an error on startup if credentials are missing,
-// but any operation attempting to use the uninitialized 'firestore' instance will fail.
 
 let firestore: AdminFirestore.Firestore | null = null;
 
@@ -18,14 +16,17 @@ if (hasAdminConfig) {
   if (!admin.apps.length) {
     try {
       const serviceAccount: admin.ServiceAccount = {
-        projectId: "retailer-emi-assist-kiwfo",
+        // The project ID must be explicitly set to the correct one.
+        projectId: "retailer-emi-assist-kiwfo", 
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        // The private key must be parsed correctly, replacing escaped newlines.
         privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
       };
 
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
+      
       console.log("Firebase Admin SDK initialized successfully for retailer-emi-assist-kiwfo.");
       firestore = admin.firestore();
     } catch (error: any) {
