@@ -7,7 +7,7 @@ const firebaseConfig = {
   projectId: "retailer-emi-assist-kiwfo",
   storageBucket: "retailer-emi-assist-kiwfo.firebasestorage.app",
   messagingSenderId: "167466574794",
-  appId: "1:167466574794:web:07102b06a5d2478c4ae533"
+  appId: "1:167466574794:web:9cc8a314845e86594ae533"
 };
 
 let firebaseApp: FirebaseApp | null = null;

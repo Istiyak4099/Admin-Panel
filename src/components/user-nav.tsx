@@ -30,7 +30,7 @@ async function fetchUserProfile(uid: string): Promise<User | null> {
     console.warn("Firestore is not initialized for user profile fetch.");
     return null;
   }
-  const userDocRef = doc(db, 'users', uid);
+  const userDocRef = doc(db, 'Dealers', uid);
   const userDoc = await getDoc(userDocRef);
   if (userDoc.exists()) {
     return { uid: userDoc.id, ...userDoc.data() } as User;
