@@ -1,12 +1,12 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim(),
+  apiKey: "YOUR_API_KEY_IS_PRIVATE_AND_SHOULD_NOT_BE_SHARED",
   authDomain: "retailer-emi-assist-kiwfo.firebaseapp.com",
   projectId: "retailer-emi-assist-kiwfo",
   storageBucket: "retailer-emi-assist-kiwfo.appspot.com",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  messagingSenderId: "108152427958",
+  appId: "1:108152427958:web:b1d796791924b6c4f0b224"
 };
 
 let firebaseApp: FirebaseApp | null = null;
@@ -16,7 +16,7 @@ const isConfigProvided =
   firebaseConfig.apiKey &&
   firebaseConfig.authDomain &&
   firebaseConfig.projectId &&
-  !firebaseConfig.apiKey.includes('YOUR_API_KEY_HERE');
+  !firebaseConfig.apiKey.includes('YOUR_API_KEY');
 
 
 if (isConfigProvided) {
