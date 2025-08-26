@@ -5,7 +5,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDzfjJoXHXUxBxV8vQidAz7oFCEy5CSJTI",
   authDomain: "retailer-emi-assist-kiwfo.firebaseapp.com",
   projectId: "retailer-emi-assist-kiwfo",
-  storageBucket: "retailer-emi-assist-kiwfo.appspot.com",
+  storageBucket: "retailer-emi-assist-kiwfo.firebasestorage.app",
   messagingSenderId: "167466574794",
   appId: "1:167466574794:web:07102b06a5d2478c4ae533"
 };
