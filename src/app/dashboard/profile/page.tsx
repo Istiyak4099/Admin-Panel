@@ -67,7 +67,7 @@ export default function ProfilePage() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         try {
-          const userDocRef = doc(db, 'users', authUser.uid);
+          const userDocRef = doc(db, 'Dealers', authUser.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             setUser({ ...userDoc.data(), uid: userDoc.id } as User);

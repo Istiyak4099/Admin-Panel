@@ -26,7 +26,7 @@ if (hasAdminConfig) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
-      console.log("Firebase Admin SDK initialized successfully.");
+      console.log("Firebase Admin SDK initialized successfully for retailer-emi-assist-kiwfo.");
       firestore = admin.firestore();
     } catch (error: any) {
       console.error("Firebase Admin SDK initialization error:", error.message);
