@@ -47,7 +47,7 @@ export async function createUserAction(
   try {
     const { name, mobileNumber, email, password, role, address, shopName, dealerCode, createdByUid } = validatedFields.data;
 
-    const usersRef = firestore.collection('users');
+    const usersRef = firestore.collection('Dealers');
     const existingUserSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
     if (!existingUserSnapshot.empty) {
       return { error: 'A user with this mobile number already exists.' };
@@ -126,7 +126,7 @@ export async function deleteUserAction(
 
   try {
     await admin.auth().deleteUser(userId);
-    const userDocRef = firestore.collection('users').doc(userId);
+    const userDocRef = firestore.collection('Dealers').doc(userId);
     await userDocRef.delete();
     console.log(`Successfully deleted user ${userId} from Auth and Firestore.`);
     return { success: true };
@@ -134,7 +134,7 @@ export async function deleteUserAction(
     console.error('Delete User Action Error:', e);
     if (e.code === 'auth/user-not-found') {
         try {
-            const userDocRef = firestore.collection('users').doc(userId);
+            const userDocRef = firestore.collection('Dealers').doc(userId);
             await userDocRef.delete();
             console.log(`Deleted orphan Firestore user ${userId}. Auth user was already gone.`);
             return { success: true };
@@ -190,8 +190,8 @@ export async function manageCodeBalanceAction(
       return { error: "You cannot transfer codes to yourself." };
   }
 
-  const actorRef = firestore.collection('users').doc(actorUid);
-  const targetUserRef = firestore.collection('users').doc(targetUserId);
+  const actorRef = firestore.collection('Dealers').doc(actorUid);
+  const targetUserRef = firestore.collection('Dealers').doc(targetUserId);
   const codesRef = firestore.collection('codes');
 
   try {

@@ -123,16 +123,16 @@ export default function UserProfilePage() {
     const fetchData = async () => {
       setPageLoading(true);
       try {
-        const userDocRef = doc(db, "users", userId);
+        const userDocRef = doc(db, "Dealers", userId);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser({ ...userDoc.data(), uid: userDoc.id } as User);
 
-          const managedUsersQuery = query(collection(db, "users"), where("createdByUid", "==", userId));
+          const managedUsersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
           const managedUsersSnapshot = await getDocs(managedUsersQuery);
           setManagedUsers(managedUsersSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
 
-          const transfersQuery = query(collection(db, "users", userId, "transfers"), orderBy("date", "desc"));
+          const transfersQuery = query(collection(db, "Dealers", userId, "transfers"), orderBy("date", "desc"));
           const transfersSnapshot = await getDocs(transfersQuery);
           setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
@@ -160,7 +160,7 @@ export default function UserProfilePage() {
       setActor(user);
       if (user) {
         try {
-          const actorDocRef = doc(db, 'users', user.uid);
+          const actorDocRef = doc(db, 'Dealers', user.uid);
           const actorDoc = await getDoc(actorDocRef);
           if (actorDoc.exists()) {
             setActorProfile({ uid: user.uid, ...actorDoc.data() } as User);

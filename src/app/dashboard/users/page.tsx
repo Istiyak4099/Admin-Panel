@@ -65,7 +65,7 @@ export default function UsersPage() {
     const fetchManagedUsers = async () => {
       setLoading(true);
       try {
-        const usersRef = collection(db, "users");
+        const usersRef = collection(db, "Dealers");
         const q = query(usersRef, where("createdByUid", "==", currentUser.uid));
         const querySnapshot = await getDocs(q);
         const usersList = querySnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
