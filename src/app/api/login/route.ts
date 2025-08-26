@@ -51,12 +51,10 @@ export async function POST(req: NextRequest) {
         if (!adminFirestoreDoc.exists) {
             console.log("Master admin document not found in Firestore. Creating it now.");
             const hashedPassword = await bcrypt.hash(password, 10);
-            const adminUserData: Omit<User, 'password'> & { password?: string } = {
-                uid: adminUserRecord.uid,
+            const adminUserData: Omit<User, 'password' | 'uid'> = {
                 name: 'Istiyak',
                 email: adminEmail,
                 mobileNumber,
-                password, // Store plain text for visibility as per existing app logic
                 hashedPassword,
                 role: 'Admin',
                 createdAt: new Date().toISOString(),
