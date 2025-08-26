@@ -18,7 +18,7 @@ if (hasAdminConfig) {
   if (!admin.apps.length) {
     try {
       const serviceAccount: admin.ServiceAccount = {
-        projectId: process.env.FIREBASE_PROJECT_ID,
+        projectId: "retailer-emi-assist-kiwfo",
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
       };
