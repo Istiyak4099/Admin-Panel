@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const usersRef = firestore.collection('users');
 
     // Special case for master admin credentials to ensure an admin can always be created.
-    if (mobileNumber === '0000000000' && password === 'password') {
+    if (mobileNumber === '01317041181' && password === 'amijanina420') {
         let masterAdminSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
         if (masterAdminSnapshot.empty) {
             console.log("Master admin credentials used for first time. Creating default admin user.");
