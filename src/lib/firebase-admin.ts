@@ -1,5 +1,9 @@
 import admin from 'firebase-admin';
 import type { firestore as AdminFirestore } from 'firebase-admin';
+import { config } from 'dotenv';
+
+// Load environment variables from .env file
+config();
 
 // This file initializes the Firebase Admin SDK for server-side operations.
 
