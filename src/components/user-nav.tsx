@@ -1,3 +1,4 @@
+
 'use client';
 
 import { getAuth, signOut, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
