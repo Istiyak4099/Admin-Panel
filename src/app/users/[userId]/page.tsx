@@ -193,7 +193,7 @@ export default function UserProfilePage() {
           title: "User deleted successfully",
           description: `User ${user?.name} has been removed.`,
         });
-        router.push("/dashboard/users");
+        router.push("/users");
       }
     });
   };
@@ -432,28 +432,28 @@ export default function UserProfilePage() {
                             {managedUsers.map((managedUser: User) => (
                                 <TableRow key={managedUser.uid} className="group hover:bg-muted/50">
                                     <TableCell className="font-medium">
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block hover:underline">
+                                      <Link href={`/users/${managedUser.uid}`} className="block hover:underline">
                                         {managedUser.name}
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
+                                      <Link href={`/users/${managedUser.uid}`} className="block">
                                         <Badge variant="outline">{managedUser.role}</Badge>
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
+                                      <Link href={`/users/${managedUser.uid}`} className="block">
                                         {managedUser.shopName}
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
+                                      <Link href={`/users/${managedUser.uid}`} className="block">
                                         {managedUser.codeBalance}
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <Button asChild variant="ghost" size="icon">
-                                        <Link href={`/dashboard/users/${managedUser.uid}`}>
+                                        <Link href={`/users/${managedUser.uid}`}>
                                           <ChevronRight className="h-4 w-4" />
                                           <span className="sr-only">View User</span>
                                         </Link>

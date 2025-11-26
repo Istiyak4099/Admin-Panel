@@ -148,28 +148,28 @@ export default function UsersPage() {
                   managedUsers.map((user) => (
                     <TableRow key={user.uid} className="group hover:bg-muted/50">
                       <TableCell className="font-medium">
-                        <Link href={`/dashboard/users/${user.uid}`} className="block hover:underline">
+                        <Link href={`/users/${user.uid}`} className="block hover:underline">
                           {user.name}
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Link href={`/dashboard/users/${user.uid}`} className="block">
+                        <Link href={`/users/${user.uid}`} className="block">
                           <Badge variant="outline">{user.role}</Badge>
                         </Link>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        <Link href={`/dashboard/users/${user.uid}`} className="block">
+                        <Link href={`/users/${user.uid}`} className="block">
                           {user.shopName}
                         </Link>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Link href={`/dashboard/users/${user.uid}`} className="block">
+                        <Link href={`/users/${user.uid}`} className="block">
                           {user.codeBalance}
                         </Link>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild variant="ghost" size="icon">
-                          <Link href={`/dashboard/users/${user.uid}`}>
+                          <Link href={`/users/${user.uid}`}>
                             <ChevronRight className="h-4 w-4" />
                             <span className="sr-only">View User</span>
                           </Link>

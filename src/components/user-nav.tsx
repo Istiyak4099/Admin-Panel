@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +60,7 @@ export function UserNav() {
     try {
       await signOut(auth);
       toast({ title: 'Logged out successfully.' });
-      window.location.href = '/login';
+      window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
       toast({
@@ -81,15 +81,10 @@ export function UserNav() {
       if (user) {
         try {
           const userProfile = await fetchUserProfile(user.uid);
-          if (userProfile) {
-            setCurrentUser(userProfile);
-          } else {
-            console.warn(`User profile not found for authenticated user ${user.uid}. Logging out.`);
-            await handleLogout();
-          }
+          setCurrentUser(userProfile);
         } catch (error) {
-          console.error("Failed to fetch user data, logging out:", error);
-          await handleLogout();
+          console.error("Failed to fetch user data:", error);
+          setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);
@@ -98,7 +93,7 @@ export function UserNav() {
     });
 
     return () => unsubscribe();
-  }, [handleLogout]);
+  }, []);
 
   const skeleton = (
     <div className="flex items-center gap-3 p-2">
@@ -115,7 +110,19 @@ export function UserNav() {
   }
 
   if (!currentUser) {
-    return null;
+    return (
+        <Link href="/login" legacyBehavior>
+            <Button variant="ghost" className="h-auto w-full justify-start gap-3 p-2 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
+                <Avatar className="h-8 w-8">
+                    <AvatarFallback>?</AvatarFallback>
+                </Avatar>
+                <div className="text-left group-data-[collapsible=icon]:hidden">
+                    <p className="text-sm font-medium">Guest</p>
+                    <p className="text-sm text-muted-foreground">Click to log in</p>
+                </div>
+            </Button>
+        </Link>
+    );
   }
 
   const fallback = currentUser.name.substring(0, 2).toUpperCase();
@@ -148,7 +155,7 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile" className="cursor-pointer">
+          <Link href="/profile" className="cursor-pointer">
             <UserIcon className="mr-2 h-4 w-4" />
             <span>My Profile</span>
           </Link>

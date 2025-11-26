@@ -16,11 +16,11 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/dashboard/lockers", icon: Lock, label: "Locker Management" },
-  { href: "/dashboard/users", icon: Users, label: "User Accounts" },
-  { href: "/dashboard/activity", icon: FileText, label: "Activity Logs" },
-  { href: "/dashboard/support", icon: LifeBuoy, label: "Support Info" },
+  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/lockers", icon: Lock, label: "Locker Management" },
+  { href: "/users", icon: Users, label: "User Accounts" },
+  { href: "/activity", icon: FileText, label: "Activity Logs" },
+  { href: "/support", icon: LifeBuoy, label: "Support Info" },
 ];
 
 export function DashboardNav() {
