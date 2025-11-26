@@ -2,10 +2,12 @@
 
 import { z } from 'zod';
 import type { User, UserRole, CodeTransfer } from '@/lib/types';
-import bcrypt from 'bcryptjs';
-import { firestore, serverConfigError } from '@/lib/firebase-admin';
-import admin from 'firebase-admin';
 import { randomBytes } from 'crypto';
+
+// This is a placeholder for server-side actions.
+// With the new client-side approach, we might not need firebase-admin here anymore for user creation.
+// For now, let's keep it simple and focus on what's needed.
+// Note: If we need complex admin actions in the future, we'll have to revisit the server-side authentication.
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -26,78 +28,24 @@ export interface CreateUserState {
   error?: string | null;
 }
 
+// This function is now a placeholder. The actual user creation will happen on the client
+// and this server action will just validate data and maybe persist to firestore.
+// This simplifies the authentication flow significantly.
 export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
 
-  if (!firestore) {
-    return { error: serverConfigError };
-  }
+  // The actual user creation in Firebase Auth will be handled client-side
+  // to avoid server-side admin SDK complexities in this environment.
+  // This action can be used to validate and store additional user data in Firestore
+  // after the client has successfully created the auth user.
+  // For now, we'll just return an error to indicate this flow needs to be fully client-side.
 
-  const validatedFields = CreateUserSchema.safeParse(data);
-
-  if (!validatedFields.success) {
-    const errors = validatedFields.error.flatten().fieldErrors;
-    const firstError = Object.values(errors).flat()[0];
-    return {
-      error: firstError || 'Invalid input.',
-    };
-  }
-
-  try {
-    const { name, mobileNumber, email, password, role, address, shopName, dealerCode, createdByUid } = validatedFields.data;
-
-    const usersRef = firestore.collection('Dealers');
-    const existingUserSnapshot = await usersRef.where('mobileNumber', '==', mobileNumber).limit(1).get();
-    if (!existingUserSnapshot.empty) {
-      return { error: 'A user with this mobile number already exists.' };
-    }
-    const existingEmailSnapshot = await usersRef.where('email', '==', email).limit(1).get();
-    if (!existingEmailSnapshot.empty) {
-        return { error: 'A user with this email address already exists.' };
-    }
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const userRecord = await admin.auth().createUser({
-      email,
-      displayName: name,
-    });
-    const uid = userRecord.uid;
-
-    const newUser: User = {
-      uid,
-      name,
-      mobileNumber,
-      email,
-      password,
-      hashedPassword,
-      role,
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      createdByUid,
-      lockerId: null,
-      address,
-      shopName,
-      dealerCode,
-      codeBalance: 0,
-    };
-
-    await usersRef.doc(uid).set(newUser);
-
-    console.log('New user created in Auth and Firestore:', { uid: newUser.uid, name: newUser.name });
-
-    const { hashedPassword: _, password: __, ...userToReturn } = newUser;
-
-    return { user: userToReturn };
-  } catch (e: any) {
-    console.error('Create User Action Error:', e);
-     if (e.code === 'auth/email-already-exists') {
-        return { error: 'A user with this email address already exists in Firebase Authentication.' };
-    }
-    return { error: e.message || 'An unexpected error occurred. Please try again.' };
-  }
+  return {
+    error: "User creation is not fully implemented on the server. Please implement client-side user creation with Firebase Auth."
+  };
 }
+
 
 export interface DeleteUserState {
   success?: boolean;
@@ -111,40 +59,8 @@ const DeleteUserSchema = z.object({
 export async function deleteUserAction(
   data: z.infer<typeof DeleteUserSchema>
 ): Promise<DeleteUserState> {
-  
-  if (!firestore || !admin.apps.length) {
-    return { error: serverConfigError };
-  }
-
-  const validatedFields = DeleteUserSchema.safeParse(data);
-
-  if (!validatedFields.success) {
-    return { error: 'Invalid User ID.' };
-  }
-  
-  const { userId } = validatedFields.data;
-
-  try {
-    await admin.auth().deleteUser(userId);
-    const userDocRef = firestore.collection('Dealers').doc(userId);
-    await userDocRef.delete();
-    console.log(`Successfully deleted user ${userId} from Auth and Firestore.`);
-    return { success: true };
-  } catch (e: any) {
-    console.error('Delete User Action Error:', e);
-    if (e.code === 'auth/user-not-found') {
-        try {
-            const userDocRef = firestore.collection('Dealers').doc(userId);
-            await userDocRef.delete();
-            console.log(`Deleted orphan Firestore user ${userId}. Auth user was already gone.`);
-            return { success: true };
-        } catch (fsError: any) {
-             console.error('Error deleting orphan Firestore user:', fsError);
-             return { error: fsError.message || 'An unexpected error occurred while deleting from Firestore.' };
-        }
-    }
-    return { error: e.message || 'An unexpected error occurred.' };
-  }
+  // Deleting users requires the Admin SDK, which we are avoiding for now.
+  return { error: 'User deletion is not implemented in this version.' };
 }
 
 const ManageCodeBalanceSchema = z.object({
@@ -172,119 +88,5 @@ function generateUniqueCodes(quantity: number): string[] {
 export async function manageCodeBalanceAction(
   data: z.infer<typeof ManageCodeBalanceSchema>
 ): Promise<ManageCodeBalanceState> {
-  if (!firestore) {
-    return { error: serverConfigError };
-  }
-
-  const validatedFields = ManageCodeBalanceSchema.safeParse(data);
-
-  if (!validatedFields.success) {
-    const errors = validatedFields.error.flatten().fieldErrors;
-    const firstError = Object.values(errors).flat()[0];
-    return { error: firstError || 'Invalid input.' };
-  }
-
-  const { targetUserId, actorUid, quantity, actionType } = validatedFields.data;
-
-  if (targetUserId === actorUid) {
-      return { error: "You cannot transfer codes to yourself." };
-  }
-
-  const actorRef = firestore.collection('Dealers').doc(actorUid);
-  const targetUserRef = firestore.collection('Dealers').doc(targetUserId);
-  const codesRef = firestore.collection('codes');
-
-  try {
-    await firestore.runTransaction(async (transaction) => {
-      const actorDoc = await transaction.get(actorRef);
-      const targetUserDoc = await transaction.get(targetUserRef);
-
-      if (!actorDoc.exists || !targetUserDoc.exists) {
-        throw new Error("One or both users not found.");
-      }
-
-      const actorData = actorDoc.data() as User;
-      const targetUserData = targetUserDoc.data() as User;
-
-      if (actionType === 'assign') {
-        if (actorData.role === 'Admin') {
-          // ADMIN GENERATION
-          const newCodes = generateUniqueCodes(quantity);
-          for (const code of newCodes) {
-            const newCodeRef = codesRef.doc();
-            transaction.set(newCodeRef, {
-              code,
-              ownerUid: targetUserId,
-              generatedByUid: actorUid,
-              generatedAt: new Date().toISOString(),
-              status: 'available',
-            });
-          }
-          transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
-        } else {
-          // USER-TO-USER TRANSFER
-          if (actorData.codeBalance < quantity) {
-            throw new Error(`Insufficient code balance. You have ${actorData.codeBalance}, but tried to assign ${quantity}.`);
-          }
-
-          const allCodesOwnedByActorQuery = codesRef.where('ownerUid', '==', actorUid);
-          const allCodesOwnedByActorSnapshot = await transaction.get(allCodesOwnedByActorQuery);
-          const availableCodes = allCodesOwnedByActorSnapshot.docs.filter(doc => doc.data().status === 'available');
-
-          if (availableCodes.length < quantity) {
-            throw new Error(`Not enough available codes to transfer. Found only ${availableCodes.length}.`);
-          }
-
-          const codesToTransfer = availableCodes.slice(0, quantity);
-          for (const doc of codesToTransfer) {
-            transaction.update(doc.ref, { ownerUid: targetUserId });
-          }
-          transaction.update(actorRef, { codeBalance: admin.firestore.FieldValue.increment(-quantity) });
-          transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
-        }
-      } else { // 'retrieve'
-        const allCodesOwnedByUserQuery = codesRef.where('ownerUid', '==', targetUserId);
-        const allCodesOwnedByUserSnapshot = await transaction.get(allCodesOwnedByUserQuery);
-        const availableCodes = allCodesOwnedByUserSnapshot.docs.filter(doc => doc.data().status === 'available');
-
-        if (availableCodes.length < quantity) {
-          throw new Error(`Cannot retrieve ${quantity} codes. User only has ${availableCodes.length} available codes.`);
-        }
-        
-        const codesToProcess = availableCodes.slice(0, quantity);
-
-        if (actorData.role === 'Admin') {
-          // ADMIN DELETION
-          for (const doc of codesToProcess) {
-            transaction.delete(doc.ref);
-          }
-        } else {
-          // USER-TO-USER TRANSFER BACK
-          for (const doc of codesToProcess) {
-            transaction.update(doc.ref, { ownerUid: actorUid });
-          }
-          transaction.update(actorRef, { codeBalance: admin.firestore.FieldValue.increment(quantity) });
-        }
-        transaction.update(targetUserRef, { codeBalance: admin.firestore.FieldValue.increment(-quantity) });
-      }
-
-      // Log the transfer
-      const transferRef = targetUserRef.collection('transfers').doc();
-      const transferDetails: Omit<CodeTransfer, 'id'> = {
-        type: actionType,
-        from: actionType === 'assign' ? actorData.name : targetUserData.name,
-        to: actionType === 'assign' ? targetUserData.name : actorData.name,
-        fromUid: actorUid,
-        toUid: targetUserId,
-        quantity,
-        date: new Date().toISOString(),
-      };
-      transaction.set(transferRef, transferDetails);
-    });
-
-    return { success: `Successfully ${actionType === 'assign' ? 'assigned' : 'retrieved'} ${quantity} codes.` };
-  } catch (e: any) {
-    console.error('Manage Code Balance Action Error:', e);
-    return { error: e.message || 'An unexpected error occurred.' };
-  }
+    return { error: "Code balance management is not implemented in this version due to server-side auth complexities." };
 }

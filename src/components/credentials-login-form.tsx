@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
+const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const firebaseConfigError = "Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.";
 
 export function CredentialsLoginForm() {
@@ -27,35 +29,56 @@ export function CredentialsLoginForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!auth) {
+    if (!auth || !db) {
         toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
         setIsLoading(false);
         return;
     }
 
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber, password }),
-      });
+      // 1. Find user by mobile number in Firestore
+      const usersRef = collection(db, "Dealers");
+      const q = query(usersRef, where("mobileNumber", "==", mobileNumber));
+      const querySnapshot = await getDocs(q);
 
-      const data = await response.json();
+      if (querySnapshot.empty) {
+        throw new Error("Invalid credentials. User not found.");
+      }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed.');
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      const email = userData.email;
+
+      if (!email) {
+          throw new Error("User record is missing an email address.");
       }
       
-      await signInWithCustomToken(auth, data.customToken);
+      // 2. Sign in with email and password
+      await signInWithEmailAndPassword(auth, email, password);
 
       toast({ title: 'Login Successful!' });
       window.location.href = '/dashboard';
 
     } catch (error: any) {
+      let errorMessage = 'An unexpected error occurred.';
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+             errorMessage = 'Invalid mobile number or password.';
+             break;
+          default:
+             errorMessage = error.message;
+        }
+      } else if (error.message) {
+          errorMessage = error.message;
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
