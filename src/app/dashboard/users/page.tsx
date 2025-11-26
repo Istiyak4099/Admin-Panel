@@ -52,6 +52,8 @@ export default function UsersPage() {
     const unsubscribe = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
       if (!user) {
+        // If no user is logged in, we should still stop loading
+        // but can't fetch managed users.
         setLoading(false);
         setManagedUsers([]);
       }
@@ -60,7 +62,12 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser || !db) return;
+    // If there's no current user, don't try to fetch.
+    if (!currentUser || !db) {
+        // If we know there's no user, stop loading.
+        if (!currentUser) setLoading(false);
+        return;
+    };
 
     const fetchManagedUsers = async () => {
       setLoading(true);
@@ -85,7 +92,7 @@ export default function UsersPage() {
       <DashboardHeader title="User Accounts">
         <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1" disabled={!currentUser}>
+            <Button size="sm" className="gap-1">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Create User
@@ -101,8 +108,10 @@ export default function UsersPage() {
             </DialogHeader>
             <CreateUserForm onSuccess={() => {
               setIsCreateUserOpen(false);
-              // Trigger a refetch
-              setCurrentUser(auth?.currentUser);
+              // Trigger a refetch if a user is logged in
+              if (auth?.currentUser) {
+                setCurrentUser(auth?.currentUser);
+              }
             }} />
           </DialogContent>
         </Dialog>
@@ -112,7 +121,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Viewing users directly under your management. Click a user to see their full profile.
+              Viewing users you have created. Click a user to see their full profile.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -171,7 +180,7 @@ export default function UsersPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No users found under your management.
+                      {currentUser ? "No users found under your management." : "Log in to see managed users."}
                     </TableCell>
                   </TableRow>
                 )}

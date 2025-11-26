@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoaderCircle, Shield, Users, FileText } from 'lucide-react';
@@ -10,28 +10,10 @@ import { LoaderCircle, Shield, Users, FileText } from 'lucide-react';
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 export function LoginHub() {
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
 
-  useEffect(() => {
-    if (!auth) {
-        setIsCheckingAuth(false);
-        return;
-    };
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // User is signed in, redirect to dashboard.
-        window.location.href = '/dashboard';
-      } else {
-        // User is signed out.
-        setIsCheckingAuth(false);
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, []);
-
+  // NOTE: The useEffect hook that was checking for authentication and causing
+  // a redirect has been removed to allow unauthenticated access to the dashboard.
 
   if (isCheckingAuth) {
     return (
