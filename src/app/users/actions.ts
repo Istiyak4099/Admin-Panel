@@ -3,11 +3,62 @@
 import { z } from 'zod';
 import type { User, UserRole, CodeTransfer } from '@/lib/types';
 import { randomBytes } from 'crypto';
+import * as admin from 'firebase-admin';
+import * as bcrypt from 'bcryptjs';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // This is a placeholder for server-side actions.
 // With the new client-side approach, we might not need firebase-admin here anymore for user creation.
 // For now, let's keep it simple and focus on what's needed.
 // Note: If we need complex admin actions in the future, we'll have to revisit the server-side authentication.
+
+const LoginSchema = z.object({
+  mobileNumber: z.string().min(1, { message: 'Mobile number is required.' }),
+  password: z.string().min(1, { message: 'Password is required.' }),
+});
+
+export interface LoginState {
+  token?: string;
+  error?: string | null;
+}
+
+export async function loginAction(
+  data: z.infer<typeof LoginSchema>
+): Promise<LoginState> {
+  try {
+    const { app, db, auth } = await getFirebaseAdmin();
+
+    const usersRef = db.collection('Dealers');
+    const q = usersRef.where('mobileNumber', '==', data.mobileNumber);
+    const querySnapshot = await q.get();
+
+    if (querySnapshot.empty) {
+      return { error: 'Invalid mobile number or password.' };
+    }
+
+    const userDoc = querySnapshot.docs[0];
+    const user = userDoc.data() as User;
+
+    if (!user.hashedPassword) {
+      return { error: 'User does not have a password set.' };
+    }
+
+    const isPasswordValid = await bcrypt.compare(data.password, user.hashedPassword);
+
+    if (!isPasswordValid) {
+      return { error: 'Invalid mobile number or password.' };
+    }
+
+    const customToken = await auth.createCustomToken(userDoc.id, { role: user.role });
+
+    return { token: customToken };
+
+  } catch (e: any) {
+    console.error('Login action error:', e);
+    return { error: e.message || 'An unexpected server error occurred.' };
+  }
+}
+
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
