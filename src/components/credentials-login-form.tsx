@@ -35,12 +35,14 @@ export function CredentialsLoginForm() {
     }
 
     try {
+      // Use the server action to validate credentials and get a custom token
       const result = await loginAction({ mobileNumber, password });
 
       if (result.error || !result.token) {
         throw new Error(result.error || "Failed to get authentication token.");
       }
       
+      // Sign in on the client with the custom token from the server
       await signInWithCustomToken(auth, result.token);
 
       toast({ title: 'Login Successful!' });

@@ -21,15 +21,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { UserRole, User } from '@/lib/types';
+import type { UserRole } from '@/lib/types';
 import { useTransition, useState, useEffect } from 'react';
 import { LoaderCircle, Eye, EyeOff } from 'lucide-react';
-import { getAuth, onAuthStateChanged, type User as AuthUser, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
+import { createUserAction } from '@/app/users/actions';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
-const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -79,7 +78,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   });
 
   async function onSubmit(data: CreateUserFormValues) {
-    if (!currentUser || !auth || !db) {
+    if (!currentUser) {
         toast({
             variant: 'destructive',
             title: 'Authentication Error',
@@ -89,79 +88,24 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
     }
 
     startTransition(async () => {
-        try {
-            const { name, mobileNumber, email, password, role, address, shopName, dealerCode } = data;
-
-            // Check for existing user by mobile or email in Firestore
-            const usersRef = collection(db, 'Dealers');
-            const mobileQuery = query(usersRef, where('mobileNumber', '==', mobileNumber));
-            const emailQuery = query(usersRef, where('email', '==', email));
-
-            const [mobileSnapshot, emailSnapshot] = await Promise.all([
-                getDocs(mobileQuery),
-                getDocs(emailQuery)
-            ]);
-
-            if (!mobileSnapshot.empty) {
-                throw new Error('A user with this mobile number already exists.');
-            }
-            if (!emailSnapshot.empty) {
-                throw new Error('A user with this email address already exists.');
-            }
-
-            // Create user in Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const newAuthUser = userCredential.user;
-
-            // Create user data for Firestore
-            const newUser: User = {
-                uid: newAuthUser.uid,
-                name,
-                mobileNumber,
-                email,
-                // We do NOT store the password in Firestore for security reasons
-                role,
-                createdAt: new Date().toISOString(),
-                status: 'active',
-                createdByUid: currentUser.uid,
-                lockerId: null,
-                address,
-                shopName,
-                dealerCode,
-                codeBalance: 0,
-            };
-
-            // Save user data to Firestore
-            await setDoc(doc(db, 'Dealers', newAuthUser.uid), newUser);
-            
+        const result = await createUserAction({
+            ...data,
+            createdByUid: currentUser.uid,
+        });
+        
+        if (result.error) {
+            toast({
+                variant: 'destructive',
+                title: 'Error creating user',
+                description: result.error,
+            });
+        } else {
             toast({
                 title: 'User created successfully',
-                description: `User ${name} has been created.`,
+                description: `User ${data.name} has been created.`,
             });
             onSuccess();
             form.reset();
-
-        } catch (error: any) {
-            let errorMessage = "An unexpected error occurred.";
-            if (error.code) {
-                switch (error.code) {
-                    case 'auth/email-already-in-use':
-                        errorMessage = "This email is already associated with an account.";
-                        break;
-                    case 'auth/weak-password':
-                        errorMessage = "The password is too weak. Please choose a stronger password.";
-                        break;
-                    default:
-                        errorMessage = error.message;
-                }
-            } else if(error.message) {
-                 errorMessage = error.message;
-            }
-             toast({
-                variant: 'destructive',
-                title: 'Error creating user',
-                description: errorMessage,
-            });
         }
     });
   }

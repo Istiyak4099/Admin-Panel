@@ -1,16 +1,42 @@
-'use server';
+"use server";
 
 import { z } from 'zod';
-import type { User, UserRole, CodeTransfer } from '@/lib/types';
-import { randomBytes } from 'crypto';
-import * as admin from 'firebase-admin';
+import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 
 // This is a placeholder for server-side actions.
 // With the new client-side approach, we might not need firebase-admin here anymore for user creation.
 // For now, let's keep it simple and focus on what's needed.
 // Note: If we need complex admin actions in the future, we'll have to revisit the server-side authentication.
+
+// --- Admin App Initialization ---
+// This is a critical change to ensure the Admin SDK initializes correctly.
+// We are now loading the credentials from environment variables.
+const serviceAccount = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+};
+
+function getFirebaseAdmin(): { auth: ReturnType<typeof getAuth>, db: ReturnType<typeof getFirestore> } {
+  if (getApps().length > 0) {
+    const app = getApps()[0] as App;
+    return { auth: getAuth(app), db: getFirestore(app) };
+  }
+
+  if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+    throw new Error('Firebase server-side environment variables are not set.');
+  }
+
+  const app = initializeApp({
+    credential: cert(serviceAccount),
+  });
+  return { auth: getAuth(app), db: getFirestore(app) };
+}
+
 
 const LoginSchema = z.object({
   mobileNumber: z.string().min(1, { message: 'Mobile number is required.' }),
@@ -26,7 +52,7 @@ export async function loginAction(
   data: z.infer<typeof LoginSchema>
 ): Promise<LoginState> {
   try {
-    const { app, db, auth } = await getFirebaseAdmin();
+    const { db, auth } = getFirebaseAdmin();
 
     const usersRef = db.collection('Dealers');
     const q = usersRef.where('mobileNumber', '==', data.mobileNumber);
@@ -40,7 +66,7 @@ export async function loginAction(
     const user = userDoc.data() as User;
 
     if (!user.hashedPassword) {
-      return { error: 'User does not have a password set.' };
+      return { error: 'User does not have a password set. Please contact an administrator.' };
     }
 
     const isPasswordValid = await bcrypt.compare(data.password, user.hashedPassword);
@@ -55,6 +81,10 @@ export async function loginAction(
 
   } catch (e: any) {
     console.error('Login action error:', e);
+    // Provide a more user-friendly error message
+    if (e.message.includes('environment variables')) {
+        return { error: 'Server configuration error. Please contact support.' };
+    }
     return { error: e.message || 'An unexpected server error occurred.' };
   }
 }
@@ -79,22 +109,76 @@ export interface CreateUserState {
   error?: string | null;
 }
 
-// This function is now a placeholder. The actual user creation will happen on the client
-// and this server action will just validate data and maybe persist to firestore.
-// This simplifies the authentication flow significantly.
 export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
+    try {
+        const { auth, db } = getFirebaseAdmin();
+        const { email, password, name, mobileNumber, role, address, shopName, dealerCode, createdByUid } = data;
 
-  // The actual user creation in Firebase Auth will be handled client-side
-  // to avoid server-side admin SDK complexities in this environment.
-  // This action can be used to validate and store additional user data in Firestore
-  // after the client has successfully created the auth user.
-  // For now, we'll just return an error to indicate this flow needs to be fully client-side.
+        // Check for existing user by mobile or email in Firestore
+        const usersRef = db.collection('Dealers');
+        const mobileQuery = usersRef.where('mobileNumber', '==', mobileNumber);
+        const emailQuery = usersRef.where('email', '==', email);
 
-  return {
-    error: "User creation is not fully implemented on the server. Please implement client-side user creation with Firebase Auth."
-  };
+        const [mobileSnapshot, emailSnapshot] = await Promise.all([
+            mobileQuery.get(),
+            emailQuery.get()
+        ]);
+
+        if (!mobileSnapshot.empty) {
+            throw new Error('A user with this mobile number already exists.');
+        }
+        if (!emailSnapshot.empty) {
+            throw new Error('A user with this email address already exists.');
+        }
+
+        // Create user in Firebase Auth
+        const userRecord = await auth.createUser({ email, password });
+        const newAuthUser = userRecord;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create user data for Firestore
+        const newUser: Omit<User, 'uid'> = {
+            name,
+            mobileNumber,
+            email,
+            hashedPassword, // Store the hashed password
+            role,
+            createdAt: new Date().toISOString(),
+            status: 'active',
+            createdByUid: createdByUid,
+            lockerId: null,
+            address,
+            shopName,
+            dealerCode,
+            codeBalance: 0,
+        };
+
+        // Save user data to Firestore
+        await db.collection('Dealers').doc(newAuthUser.uid).set(newUser);
+        
+        return { user: { ...newUser, uid: newAuthUser.uid } };
+
+    } catch (error: any) {
+        let errorMessage = "An unexpected error occurred during user creation.";
+         if (error.code) {
+            switch (error.code) {
+                case 'auth/email-already-exists':
+                    errorMessage = "This email is already associated with an account.";
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = "The password is too weak. Please choose a stronger password.";
+                    break;
+                default:
+                    errorMessage = `Server error: ${error.message}`;
+            }
+        } else if (error.message) {
+             errorMessage = error.message;
+        }
+        return { error: errorMessage };
+    }
 }
 
 
@@ -110,8 +194,17 @@ const DeleteUserSchema = z.object({
 export async function deleteUserAction(
   data: z.infer<typeof DeleteUserSchema>
 ): Promise<DeleteUserState> {
-  // Deleting users requires the Admin SDK, which we are avoiding for now.
-  return { error: 'User deletion is not implemented in this version.' };
+   try {
+    const { auth, db } = getFirebaseAdmin();
+    const { userId } = data;
+
+    await auth.deleteUser(userId);
+    await db.collection('Dealers').doc(userId).delete();
+
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to delete user.' };
+  }
 }
 
 const ManageCodeBalanceSchema = z.object({
@@ -125,16 +218,6 @@ export interface ManageCodeBalanceState {
   success?: string;
   error?: string | null;
 }
-
-function generateUniqueCodes(quantity: number): string[] {
-  const codes = new Set<string>();
-  while (codes.size < quantity) {
-    const code = randomBytes(7).toString('hex'); // 14 hex characters
-    codes.add(code);
-  }
-  return Array.from(codes);
-}
-
 
 export async function manageCodeBalanceAction(
   data: z.infer<typeof ManageCodeBalanceSchema>
