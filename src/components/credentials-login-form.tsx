@@ -68,6 +68,9 @@ export function CredentialsLoginForm() {
           case 'auth/invalid-credential':
              errorMessage = 'Invalid mobile number or password.';
              break;
+          case 'permission-denied':
+             errorMessage = 'You do not have permission to access this resource. Please check your security rules.';
+             break;
           default:
              errorMessage = error.message;
         }
