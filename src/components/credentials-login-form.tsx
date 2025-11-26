@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,9 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import { loginAction } from '@/app/users/actions-login';
+import type { User } from '@/lib/types';
+import bcrypt from 'bcryptjs';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
+const db = firebaseApp ? getFirestore(firebaseApp) : null;
+
 const firebaseConfigError = "Firebase client configuration is invalid or missing. Ensure your client-side setup is correct.";
 
 export function CredentialsLoginForm() {
@@ -28,22 +32,41 @@ export function CredentialsLoginForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!auth) {
+    if (!auth || !db) {
         toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
         setIsLoading(false);
         return;
     }
 
     try {
-      // Step 1: Use a server action to validate credentials and get a custom token.
-      const result = await loginAction({ mobileNumber, password });
+      // Step 1: Find user by mobile number in Firestore
+      const usersRef = collection(db, 'Dealers');
+      const q = query(usersRef, where('mobileNumber', '==', mobileNumber), limit(1));
+      const querySnapshot = await getDocs(q);
 
-      if (result.error || !result.token) {
-        throw new Error(result.error || "Invalid mobile number or password.");
-      } 
+      if (querySnapshot.empty) {
+          throw new Error('Invalid mobile number or password.');
+      }
+
+      const userDoc = querySnapshot.docs[0];
+      const user = userDoc.data() as User;
+
+      // Step 2: Verify password using bcryptjs
+      if (!user.hashedPassword) {
+        throw new Error('User data is incomplete. Cannot verify password.');
+      }
       
-      // Step 2: If the token is returned, sign in on the client.
-      await signInWithCustomToken(auth, result.token);
+      const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
+
+      if (!isPasswordValid) {
+        throw new Error('Invalid mobile number or password.');
+      }
+      
+      // Step 3: Sign in with email and password using Firebase Auth SDK
+      // This is the standard Firebase sign-in method. We use it after verifying
+      // the password against our custom hash to complete the session.
+      await signInWithEmailAndPassword(auth, user.email, password);
+      
       toast({ title: 'Login Successful!' });
       window.location.href = '/dashboard';
 

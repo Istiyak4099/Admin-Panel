@@ -14,8 +14,14 @@ const initializeAdminApp = () => {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 
+    // Check if the essential environment variables are set.
+    // If not, we cannot initialize the admin app.
     if (!projectId || !privateKey || !clientEmail) {
-        throw new Error("Firebase server-side environment variables are not set.");
+        if (admin.apps.length === 0) { // Only check if no app is initialized
+            console.error("Firebase server-side environment variables are not set. Cannot initialize admin app.");
+            return null;
+        }
+        return admin.app(); // Return existing app if already initialized
     }
     
     if (admin.apps.length === 0) {
@@ -23,7 +29,7 @@ const initializeAdminApp = () => {
             credential: credential.cert({ projectId, privateKey, clientEmail }),
         });
     }
-    return admin;
+    return admin.app();
 };
 
 
@@ -49,8 +55,12 @@ export interface CreateUserState {
 export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
+    const adminApp = initializeAdminApp();
+    if (!adminApp) {
+        return { error: "Server configuration error. Cannot connect to Firebase." };
+    }
+    
     try {
-        const adminApp = initializeAdminApp();
         const auth = getAuth(adminApp);
         const firestore = getFirestore(adminApp);
 
