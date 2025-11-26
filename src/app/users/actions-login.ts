@@ -4,9 +4,9 @@ import { z } from 'zod';
 import * as bcrypt from 'bcryptjs';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeAdminApp } from '@/lib/firebase-admin-init';
+import { credential } from 'firebase-admin';
+import * as admin from 'firebase-admin';
 import type { User } from '@/lib/types';
-
 
 const LoginSchema = z.object({
   mobileNumber: z.string().min(1, { message: 'Mobile number is required.' }),
@@ -18,13 +18,31 @@ export interface LoginState {
   error?: string | null;
 }
 
+// Helper function to initialize the app (avoids multiple initializations)
+const initializeAdminApp = () => {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+    if (!projectId || !privateKey || !clientEmail) {
+        throw new Error("Firebase server-side environment variables are not set.");
+    }
+
+    if (admin.apps.length === 0) {
+        admin.initializeApp({
+            credential: credential.cert({ projectId, privateKey, clientEmail }),
+        });
+    }
+    return admin;
+};
+
 export async function loginAction(
   data: z.infer<typeof LoginSchema>
 ): Promise<LoginState> {
     try {
-        await initializeAdminApp();
-        const auth = getAuth();
-        const firestore = getFirestore();
+        const adminApp = initializeAdminApp();
+        const auth = getAuth(adminApp);
+        const firestore = getFirestore(adminApp);
 
         // 1. Find user by mobile number in Firestore
         const usersRef = firestore.collection('Dealers');
@@ -54,8 +72,7 @@ export async function loginAction(
         return { token: customToken };
 
     } catch (e: any) {
-        console.error("Login Action Error:", e);
-        // This is a generic error message because the server environment may not have access to specific error details.
-        return { error: 'Server configuration error. Please try again later.' };
+        console.error("Login Action Error:", e.message);
+        return { error: 'An unexpected server error occurred. Please check server logs.' };
     }
 }

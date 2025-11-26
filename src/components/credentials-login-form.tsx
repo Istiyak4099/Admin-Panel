@@ -13,7 +13,7 @@ import { LoaderCircle } from 'lucide-react';
 import { loginAction } from '@/app/users/actions-login';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
-const firebaseConfigError = "Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.";
+const firebaseConfigError = "Firebase client configuration is invalid or missing. Ensure your client-side setup is correct.";
 
 export function CredentialsLoginForm() {
   const { toast } = useToast();

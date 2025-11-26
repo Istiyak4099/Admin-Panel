@@ -5,7 +5,26 @@ import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeAdminApp } from '@/lib/firebase-admin-init';
+import { credential } from 'firebase-admin';
+import * as admin from 'firebase-admin';
+
+// Helper function to initialize the app (avoids multiple initializations)
+const initializeAdminApp = () => {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+    if (!projectId || !privateKey || !clientEmail) {
+        throw new Error("Firebase server-side environment variables are not set.");
+    }
+    
+    if (admin.apps.length === 0) {
+        admin.initializeApp({
+            credential: credential.cert({ projectId, privateKey, clientEmail }),
+        });
+    }
+    return admin;
+};
 
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
@@ -31,9 +50,9 @@ export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
     try {
-        await initializeAdminApp();
-        const auth = getAuth();
-        const firestore = getFirestore();
+        const adminApp = initializeAdminApp();
+        const auth = getAuth(adminApp);
+        const firestore = getFirestore(adminApp);
 
         // Create user in Firebase Auth
         const userRecord = await auth.createUser({
@@ -68,15 +87,13 @@ export async function createUserAction(
 
     } catch (e: any) {
         console.error("Error creating user:", e);
-        // Provide more specific error messages
         if (e.code === 'auth/email-already-exists') {
             return { error: "This email address is already in use by another account." };
         }
         if (e.code === 'auth/phone-number-already-exists') {
             return { error: "This phone number is already in use by another account." };
         }
-        // Generic error for server-side issues
-        return { error: "An unexpected server error occurred while creating the user." };
+        return { error: e.message || "An unexpected server error occurred while creating the user." };
     }
 }
 
