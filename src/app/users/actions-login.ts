@@ -4,7 +4,7 @@ import { z } from 'zod';
 import * as bcrypt from 'bcryptjs';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeAdminApp } from '@/lib/firebase-admin';
+import { initializeAdminApp } from '@/lib/firebase-admin-init';
 import type { User } from '@/lib/types';
 
 
@@ -55,6 +55,7 @@ export async function loginAction(
 
     } catch (e: any) {
         console.error("Login Action Error:", e);
+        // This is a generic error message because the server environment may not have access to specific error details.
         return { error: 'Server configuration error. Please try again later.' };
     }
 }

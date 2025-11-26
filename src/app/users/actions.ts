@@ -5,11 +5,8 @@ import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeAdminApp } from '@/lib/firebase-admin';
+import { initializeAdminApp } from '@/lib/firebase-admin-init';
 
-// All firebase-admin related code has been removed as it was causing server configuration errors.
-// The login logic will be handled on the client-side for now to bypass the environment variable issue.
-// This file will be updated with correct server actions as we build out features.
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -78,7 +75,8 @@ export async function createUserAction(
         if (e.code === 'auth/phone-number-already-exists') {
             return { error: "This phone number is already in use by another account." };
         }
-        return { error: e.message || "An unexpected error occurred while creating the user." };
+        // Generic error for server-side issues
+        return { error: "An unexpected server error occurred while creating the user." };
     }
 }
 
@@ -95,7 +93,7 @@ const DeleteUserSchema = z.object({
 export async function deleteUserAction(
   data: z.infer<typeof DeleteUserSchema>
 ): Promise<DeleteUserState> {
-   return { error: "User deletion is not implemented in this version." };
+   return { error: "User deletion is not implemented yet." };
 }
 
 const ManageCodeBalanceSchema = z.object({
@@ -113,5 +111,5 @@ export interface ManageCodeBalanceState {
 export async function manageCodeBalanceAction(
   data: z.infer<typeof ManageCodeBalanceSchema>
 ): Promise<ManageCodeBalanceState> {
-    return { error: "Code balance management is not implemented in this version due to server-side auth complexities." };
+    return { error: "Code balance management is not implemented yet." };
 }
