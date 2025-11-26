@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getAuth, signInWithEmailAndPassword, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import * as bcrypt from 'bcryptjs';
@@ -40,7 +40,6 @@ export function CredentialsLoginForm() {
 
     try {
       // Step 1: Find the user by mobile number in Firestore.
-      // This query will likely fail initially due to security rules, which is expected.
       const usersRef = collection(db, 'Dealers');
       const q = query(usersRef, where('mobileNumber', '==', mobileNumber));
       const querySnapshot = await getDocs(q);
@@ -64,21 +63,12 @@ export function CredentialsLoginForm() {
       }
       
       // Step 3: If password is valid, use a server action to get a custom token.
-      // We are calling the server action here which is currently stubbed out.
-      // This part will be completed in the next steps.
       const result = await loginAction({ mobileNumber, password });
 
       if (result.error || !result.token) {
-        // This will happen because loginAction is not implemented.
-        // For now, let's just simulate success for UI purposes if password was valid.
-        console.log("Simulating login success as server action is a stub.");
-        
-        // This is a temporary measure to demonstrate the flow would work.
-        // We will replace this with a proper custom token flow.
-        // For now, we just show a success toast.
-        toast({ title: 'Login logic validated!', description: "Next step is fixing security rules." });
-        // In a real scenario, we would do: await signInWithCustomToken(auth, result.token);
-        // and then: window.location.href = '/dashboard';
+        // This will happen because loginAction is not fully implemented yet.
+        // We throw a specific error to show this.
+        throw new Error(result.error || "Server-side login is not yet configured. Password was valid.");
 
       } else {
          // This part will run once the server action is correctly implemented.
