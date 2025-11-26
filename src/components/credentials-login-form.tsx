@@ -71,11 +71,20 @@ export function CredentialsLoginForm() {
       window.location.href = '/dashboard';
 
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
+      // Differentiate between user-facing errors and Firebase internal errors
+      if (error.message === 'Invalid mobile number or password.' || error.code?.includes('auth/')) {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'Invalid mobile number or password.',
+        });
+      } else {
+         toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: error.message || 'An unexpected error occurred.',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
