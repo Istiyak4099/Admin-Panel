@@ -78,19 +78,10 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   });
 
   async function onSubmit(data: CreateUserFormValues) {
-    if (!currentUser) {
-        toast({
-            variant: 'destructive',
-            title: 'Authentication Error',
-            description: 'You must be logged in to create a user.',
-        });
-        return;
-    }
-
     startTransition(async () => {
         const result = await createUserAction({
             ...data,
-            createdByUid: currentUser.uid,
+            createdByUid: currentUser?.uid ?? null,
         });
         
         if (result.error) {
@@ -244,7 +235,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isPending || !currentUser}>
+        <Button type="submit" className="w-full" disabled={isPending}>
           {isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
           Create User
         </Button>

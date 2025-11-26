@@ -44,7 +44,7 @@ const CreateUserSchema = z.object({
   address: z.string().min(5, { message: 'Address is required.' }),
   shopName: z.string().min(2, { message: 'Shop Name is required.' }),
   dealerCode: z.string().min(1, { message: 'Dealer Code is required.' }),
-  createdByUid: z.string().min(1, { message: 'Creator UID is missing.' }),
+  createdByUid: z.string().nullable(),
 });
 
 export interface CreateUserState {
@@ -82,7 +82,8 @@ export async function createUserAction(
             role: data.role,
             createdAt: new Date().toISOString(),
             lockerId: null,
-            createdByUid: data.createdByUid,
+            // If createdByUid is null (unauthenticated), set it to the new user's own UID.
+            createdByUid: data.createdByUid ?? userRecord.uid,
             status: "active",
             address: data.address,
             shopName: data.shopName,
