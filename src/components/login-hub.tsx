@@ -32,6 +32,7 @@ export function LoginHub() {
     return () => unsubscribe();
   }, []);
 
+
   if (isCheckingAuth) {
     return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4">
@@ -40,6 +41,7 @@ export function LoginHub() {
         </div>
     );
   }
+
 
   return (
     <div className="grid w-full max-w-5xl gap-8 md:grid-cols-3">
