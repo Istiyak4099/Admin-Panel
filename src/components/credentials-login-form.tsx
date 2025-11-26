@@ -3,20 +3,16 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
-import * as bcrypt from 'bcryptjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import type { User } from '@/lib/types';
-import { loginAction } from '@/app/users/actions';
+import { loginAction } from '@/app/users/actions-login';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
-const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const firebaseConfigError = "Firebase client configuration is invalid or missing. Please ensure your .env file is correctly populated with values from your Firebase project settings.";
 
 export function CredentialsLoginForm() {
@@ -32,50 +28,24 @@ export function CredentialsLoginForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!auth || !db) {
+    if (!auth) {
         toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
         setIsLoading(false);
         return;
     }
 
     try {
-      // Step 1: Find the user by mobile number in Firestore.
-      const usersRef = collection(db, 'Dealers');
-      const q = query(usersRef, where('mobileNumber', '==', mobileNumber));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        throw new Error('Invalid mobile number or password.');
-      }
-
-      const userDoc = querySnapshot.docs[0];
-      const user = userDoc.data() as User;
-
-      // Step 2: Verify the password using bcryptjs.
-      if (!user.hashedPassword) {
-        throw new Error('User does not have a password set. Please contact an administrator.');
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
-
-      if (!isPasswordValid) {
-        throw new Error('Invalid mobile number or password.');
-      }
-      
-      // Step 3: If password is valid, use a server action to get a custom token.
+      // Step 1: Use a server action to validate credentials and get a custom token.
       const result = await loginAction({ mobileNumber, password });
 
       if (result.error || !result.token) {
-        // This will happen because loginAction is not fully implemented yet.
-        // We throw a specific error to show this.
-        throw new Error(result.error || "Server-side login is not yet configured. Password was valid.");
-
-      } else {
-         // This part will run once the server action is correctly implemented.
-        await signInWithCustomToken(auth, result.token);
-        toast({ title: 'Login Successful!' });
-        window.location.href = '/dashboard';
-      }
+        throw new Error(result.error || "Invalid mobile number or password.");
+      } 
+      
+      // Step 2: If the token is returned, sign in on the client.
+      await signInWithCustomToken(auth, result.token);
+      toast({ title: 'Login Successful!' });
+      window.location.href = '/dashboard';
 
     } catch (error: any) {
       toast({

@@ -3,30 +3,13 @@
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { initializeAdminApp } from '@/lib/firebase-admin';
 
 // All firebase-admin related code has been removed as it was causing server configuration errors.
 // The login logic will be handled on the client-side for now to bypass the environment variable issue.
 // This file will be updated with correct server actions as we build out features.
-
-const LoginSchema = z.object({
-  mobileNumber: z.string().min(1, { message: 'Mobile number is required.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
-});
-
-export interface LoginState {
-  token?: string;
-  error?: string | null;
-}
-
-export async function loginAction(
-  data: z.infer<typeof LoginSchema>
-): Promise<LoginState> {
-  // This server action is temporarily disabled to prevent server configuration errors.
-  // The login logic has been moved to the credentials-login-form.tsx component.
-  console.error("loginAction is called but is not implemented correctly. This should be handled on the client.");
-  return { error: 'Login is not configured correctly. Please contact support.' };
-}
-
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -50,10 +33,53 @@ export interface CreateUserState {
 export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
-    // This action still depends on firebase-admin and will fail.
-    // It needs to be refactored to use client-side SDK calls or a properly configured server environment.
-    // For now, focusing on the login flow.
-    return { error: "User creation is not implemented in this version due to server-side auth complexities." };
+    try {
+        await initializeAdminApp();
+        const auth = getAuth();
+        const firestore = getFirestore();
+
+        // Create user in Firebase Auth
+        const userRecord = await auth.createUser({
+            email: data.email,
+            password: data.password,
+            displayName: data.name,
+            phoneNumber: `+91${data.mobileNumber}` // Assuming Indian phone numbers
+        });
+
+        const hashedPassword = await bcrypt.hash(data.password, 10);
+
+        const newUser: Omit<User, 'uid'> = {
+            name: data.name,
+            email: data.email,
+            mobileNumber: data.mobileNumber,
+            hashedPassword: hashedPassword,
+            role: data.role,
+            createdAt: new Date().toISOString(),
+            lockerId: null,
+            createdByUid: data.createdByUid,
+            status: "active",
+            address: data.address,
+            shopName: data.shopName,
+            dealerCode: data.dealerCode,
+            codeBalance: 0,
+        };
+
+        // Create user document in Firestore
+        await firestore.collection("Dealers").doc(userRecord.uid).set(newUser);
+        
+        return { user: { ...newUser, uid: userRecord.uid } };
+
+    } catch (e: any) {
+        console.error("Error creating user:", e);
+        // Provide more specific error messages
+        if (e.code === 'auth/email-already-exists') {
+            return { error: "This email address is already in use by another account." };
+        }
+        if (e.code === 'auth/phone-number-already-exists') {
+            return { error: "This phone number is already in use by another account." };
+        }
+        return { error: e.message || "An unexpected error occurred while creating the user." };
+    }
 }
 
 
