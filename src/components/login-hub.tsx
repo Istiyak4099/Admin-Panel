@@ -1,31 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { getAuth } from 'firebase/auth';
-import { firebaseApp } from '@/lib/firebase-client';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LoaderCircle, Shield, Users, FileText } from 'lucide-react';
-
-const auth = firebaseApp ? getAuth(firebaseApp) : null;
+import { Shield, Users, FileText } from 'lucide-react';
 
 export function LoginHub() {
-  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
-
-  // NOTE: The useEffect hook that was checking for authentication and causing
-  // a redirect has been removed to allow unauthenticated access to the dashboard.
-
-  if (isCheckingAuth) {
-    return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-            <LoaderCircle className="h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground">Please wait...</p>
-        </div>
-    );
-  }
-
-
   return (
     <div className="grid w-full max-w-5xl gap-8 md:grid-cols-3">
         <Link href="/credentials-login?role=Admin" className="block transition-transform hover:scale-105">

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +61,7 @@ export function UserNav() {
     try {
       await signOut(auth);
       toast({ title: 'Logged out successfully.' });
-      window.location.reload();
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       toast({

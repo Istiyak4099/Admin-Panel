@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import type { User } from "@/lib/types";
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Skeleton } from "@/components/ui/skeleton";
 
