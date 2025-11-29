@@ -21,16 +21,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { UserRole } from '@/lib/types';
+import type { User, UserRole } from '@/lib/types';
 import { useTransition, useState, useEffect } from 'react';
 import { LoaderCircle, Eye, EyeOff } from 'lucide-react';
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import { createUserAction } from '@/app/users/actions';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
+const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
-const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
+const ALL_ROLES: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
+
+const roleHierarchy: Record<UserRole, UserRole[]> = {
+  Admin: ["Admin", "Super", "Distributor", "Retailer"],
+  Super: ["Distributor", "Retailer"],
+  Distributor: ["Retailer"],
+  Retailer: [],
+};
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -40,7 +49,7 @@ const CreateUserSchema = z.object({
   address: z.string().min(5, { message: 'Address is required.' }),
   dealerCode: z.string().min(1, { message: 'Dealer Code is required.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  role: z.enum(userRoles as [string, ...string[]]),
+  role: z.enum(ALL_ROLES as [string, ...string[]]),
 });
 
 type CreateUserFormValues = z.infer<typeof CreateUserSchema>;
@@ -53,12 +62,36 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  
+  const availableRoles = currentUser ? roleHierarchy[currentUser.role] : [];
 
   useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+    if (!auth || !db) {
+        setAuthChecked(true);
+        return;
+    };
+    const unsubscribe = onAuthStateChanged(auth, async (user: AuthUser | null) => {
+      if (user) {
+         try {
+          const userDocRef = doc(db, 'Dealers', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setCurrentUser({ uid: user.uid, ...userDoc.data() } as User);
+          } else {
+            // This might be the initial Admin user who doesn't have a Firestore doc yet
+            // or an unhandled case. For now, assume null profile.
+            setCurrentUser(null);
+          }
+        } catch (error) {
+          console.warn("Could not fetch user profile", error);
+          setCurrentUser(null);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      setAuthChecked(true);
     });
     return () => unsubscribe();
   }, []);
@@ -76,6 +109,12 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       dealerCode: '',
     },
   });
+
+  useEffect(() => {
+    if (availableRoles.length > 0 && !availableRoles.includes(form.getValues('role'))) {
+      form.setValue('role', availableRoles[0]);
+    }
+  }, [availableRoles, form]);
 
   async function onSubmit(data: CreateUserFormValues) {
     startTransition(async () => {
@@ -99,6 +138,10 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             form.reset();
         }
     });
+  }
+  
+  if (!authChecked) {
+      return <div className="flex justify-center items-center p-8"><LoaderCircle className="animate-spin"/></div>
   }
 
   return (
@@ -217,25 +260,31 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger disabled={availableRoles.length === 0}>
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {userRoles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
+                  {availableRoles.length > 0 ? (
+                    availableRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>
+                      You cannot create users
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isPending}>
+        <Button type="submit" className="w-full" disabled={isPending || availableRoles.length === 0}>
           {isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
           Create User
         </Button>
