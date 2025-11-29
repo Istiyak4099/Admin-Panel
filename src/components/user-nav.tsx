@@ -61,7 +61,7 @@ export function UserNav() {
     try {
       await signOut(auth);
       toast({ title: 'Logged out successfully.' });
-      window.location.href = '/login';
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       toast({
@@ -112,7 +112,7 @@ export function UserNav() {
 
   if (!currentUser) {
     return (
-        <Link href="/login" legacyBehavior>
+        <Link href="/" legacyBehavior>
             <Button variant="ghost" className="h-auto w-full justify-start gap-3 p-2 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
                 <Avatar className="h-8 w-8">
                     <AvatarFallback>?</AvatarFallback>
@@ -156,7 +156,7 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/profile" className="cursor-pointer">
+          <Link href="/dashboard/profile" className="cursor-pointer">
             <UserIcon className="mr-2 h-4 w-4" />
             <span>My Profile</span>
           </Link>

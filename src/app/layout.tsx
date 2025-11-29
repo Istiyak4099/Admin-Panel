@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import React from "react";
-import { AppProvider } from "./provider";
 
 export const metadata: Metadata = {
   title: "LockerAdmin Pro",
@@ -29,7 +28,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppProvider>{children}</AppProvider>
+        {children}
         <Toaster />
       </body>
     </html>

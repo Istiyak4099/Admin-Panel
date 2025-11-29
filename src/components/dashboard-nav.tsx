@@ -19,14 +19,14 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/lockers", icon: Lock, label: "Locker Management" },
-  { href: "/users", icon: Users, label: "User Accounts" },
-  { href: "/devices", icon: Smartphone, label: "Device Tracking" },
-  { href: "/payments", icon: CreditCard, label: "Payments" },
-  { href: "/banners", icon: GalleryHorizontal, label: "App Banners" },
-  { href: "/activity", icon: FileText, label: "Activity Logs" },
-  { href: "/support", icon: LifeBuoy, label: "Support Info" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/dashboard/lockers", icon: Lock, label: "Locker Management" },
+  { href: "/dashboard/users", icon: Users, label: "User Accounts" },
+  { href: "/dashboard/devices", icon: Smartphone, label: "Device Tracking" },
+  { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
+  { href: "/dashboard/banners", icon: GalleryHorizontal, label: "App Banners" },
+  { href: "/dashboard/activity", icon: FileText, label: "Activity Logs" },
+  { href: "/dashboard/support", icon: LifeBuoy, label: "Support Info" },
 ];
 
 export function DashboardNav() {
