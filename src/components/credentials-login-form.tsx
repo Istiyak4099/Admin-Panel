@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useActionState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ export function CredentialsLoginForm() {
   const [password, setPassword] = useState('admin123');
   
   const initialState: LoginState = { success: false, error: null };
-  const [state, formAction] = useFormState(loginAction, initialState);
+  const [state, formAction] = useActionState(loginAction, initialState);
 
   useEffect(() => {
     if (state.error) {
