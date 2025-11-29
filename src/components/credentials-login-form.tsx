@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useFormState, useFormStatus } from 'react-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,84 +11,64 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import type { User } from '@/lib/types';
-import bcrypt from 'bcryptjs';
+import { loginAction, type LoginState } from '@/app/users/actions-login';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
-const db = firebaseApp ? getFirestore(firebaseApp) : null;
-
 const firebaseConfigError = "Firebase client configuration is invalid or missing. Ensure your client-side setup is correct.";
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full" disabled={pending || !auth}>
+      {pending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+      Log In
+    </Button>
+  );
+}
 
 export function CredentialsLoginForm() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'User';
 
-  const [mobileNumber, setMobileNumber] = useState('01317041181');
   const [password, setPassword] = useState('admin123');
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const initialState: LoginState = { success: false, error: null };
+  const [state, formAction] = useFormState(loginAction, initialState);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  useEffect(() => {
+    if (state.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: state.error,
+      });
+    }
 
-    if (!auth || !db) {
+    if (state.success && state.user?.email) {
+      if (!auth) {
         toast({ variant: 'destructive', title: 'Configuration Error', description: firebaseConfigError });
-        setIsLoading(false);
         return;
+      }
+      
+      // The server has verified the password. Now, complete the sign-in on the client.
+      const completeSignIn = async () => {
+        try {
+          await signInWithEmailAndPassword(auth, state.user!.email, password);
+          toast({ title: 'Login Successful!' });
+          window.location.href = '/dashboard';
+        } catch (e: any) {
+           toast({
+            variant: 'destructive',
+            title: 'Login Finalization Failed',
+            description: "Your credentials are correct, but the final sign-in step failed. Please try again.",
+          });
+        }
+      };
+      completeSignIn();
     }
+  }, [state, toast, password]);
 
-    try {
-      // Step 1: Find user by mobile number in Firestore
-      const usersRef = collection(db, 'Dealers');
-      const q = query(usersRef, where('mobileNumber', '==', mobileNumber), limit(1));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-          throw new Error('Invalid mobile number or password.');
-      }
-
-      const userDoc = querySnapshot.docs[0];
-      const user = userDoc.data() as User;
-
-      // Step 2: Verify password using bcryptjs
-      if (!user.hashedPassword) {
-        throw new Error('User data is incomplete. Cannot verify password.');
-      }
-      
-      const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
-
-      if (!isPasswordValid) {
-        throw new Error('Invalid mobile number or password.');
-      }
-      
-      // Step 3: Sign in with email and password using Firebase Auth SDK
-      // This is the standard Firebase sign-in method. We use it after verifying
-      // the password against our custom hash to complete the session.
-      await signInWithEmailAndPassword(auth, user.email, password);
-      
-      toast({ title: 'Login Successful!' });
-      window.location.href = '/dashboard';
-
-    } catch (error: any) {
-      // Differentiate between user-facing errors and Firebase internal errors
-      if (error.message === 'Invalid mobile number or password.' || error.code?.includes('auth/')) {
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'Invalid mobile number or password.',
-        });
-      } else {
-         toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: error.message || 'An unexpected error occurred.',
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <Card className="w-full max-w-sm">
@@ -97,15 +77,15 @@ export function CredentialsLoginForm() {
         <CardDescription>Enter your mobile number and password to sign in.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={formAction} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="mobileNumber">Mobile Number</Label>
             <Input
               id="mobileNumber"
+              name="mobileNumber"
               type="text"
               placeholder="Enter your mobile number"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
+              defaultValue="01317041181"
               required
             />
           </div>
@@ -113,6 +93,7 @@ export function CredentialsLoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              name="password"
               type="password"
               placeholder="Enter your password"
               value={password}
@@ -120,10 +101,7 @@ export function CredentialsLoginForm() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading || !auth}>
-            {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Log In
-          </Button>
+          <SubmitButton />
         </form>
       </CardContent>
     </Card>
