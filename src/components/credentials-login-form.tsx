@@ -68,7 +68,7 @@ export function CredentialsLoginForm() {
       await signInWithEmailAndPassword(auth, user.email, password);
       
       toast({ title: 'Login Successful!' });
-      window.location.href = '/dashboard';
+      window.location.href = '/';
 
     } catch (error: any) {
       // Differentiate between user-facing errors and Firebase internal errors
