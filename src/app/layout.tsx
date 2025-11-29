@@ -2,19 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import React from "react";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { DashboardNav } from "@/components/dashboard-nav";
-import { Button } from "@/components/ui/button";
-import { ShieldCheck, X } from "lucide-react";
-import { UserNav } from "@/components/user-nav";
+import { AppProvider } from "./provider";
 
 export const metadata: Metadata = {
   title: "LockerAdmin Pro",
@@ -27,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -41,39 +29,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider>
-          <Sidebar>
-            <SidebarHeader>
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-10 rounded-full text-primary hover:bg-primary/10"
-                  >
-                    <ShieldCheck className="size-6" />
-                  </Button>
-                  <div className="flex flex-col">
-                    <span className="text-lg font-semibold tracking-tight text-primary">
-                      LockerAdmin
-                    </span>
-                    <span className="text-xs text-muted-foreground">Pro</span>
-                  </div>
-                </div>
-                <SidebarTrigger className="group-data-[collapsible=icon]:hidden">
-                  <X />
-                </SidebarTrigger>
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <DashboardNav />
-            </SidebarContent>
-            <SidebarFooter>
-              <UserNav />
-            </SidebarFooter>
-          </Sidebar>
-          <SidebarInset>{children}</SidebarInset>
-        </SidebarProvider>
+        <AppProvider>{children}</AppProvider>
         <Toaster />
       </body>
     </html>
