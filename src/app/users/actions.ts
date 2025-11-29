@@ -1,37 +1,12 @@
+
 "use server";
 
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { credential } from 'firebase-admin';
-import * as admin from 'firebase-admin';
-
-// Helper function to initialize the app (avoids multiple initializations)
-const initializeAdminApp = () => {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-
-    // Check if the essential environment variables are set.
-    // If not, we cannot initialize the admin app.
-    if (!projectId || !privateKey || !clientEmail) {
-        if (admin.apps.length === 0) { // Only check if no app is initialized
-            console.error("Firebase server-side environment variables are not set. Cannot initialize admin app.");
-            return null;
-        }
-        return admin.app(); // Return existing app if already initialized
-    }
-    
-    if (admin.apps.length === 0) {
-        admin.initializeApp({
-            credential: credential.cert({ projectId, privateKey, clientEmail }),
-        });
-    }
-    return admin.app();
-};
-
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { firebaseApp } from '@/lib/firebase-client';
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -55,22 +30,18 @@ export interface CreateUserState {
 export async function createUserAction(
   data: z.infer<typeof CreateUserSchema>
 ): Promise<CreateUserState> {
-    const adminApp = initializeAdminApp();
-    if (!adminApp) {
+    if (!firebaseApp) {
         return { error: "Server configuration error. Cannot connect to Firebase." };
     }
     
     try {
-        const auth = getAuth(adminApp);
-        const firestore = getFirestore(adminApp);
+        const auth = getAuth(firebaseApp);
+        const firestore = getFirestore(firebaseApp);
 
-        // Create user in Firebase Auth
-        const userRecord = await auth.createUser({
-            email: data.email,
-            password: data.password,
-            displayName: data.name,
-            phoneNumber: `+91${data.mobileNumber}` // Assuming Indian phone numbers
-        });
+        // This uses the client SDK, but in a server action it's running on the server.
+        // It's a workaround for environments where the Admin SDK is problematic.
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const userRecord = userCredential.user;
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
@@ -82,7 +53,6 @@ export async function createUserAction(
             role: data.role,
             createdAt: new Date().toISOString(),
             lockerId: null,
-            // If createdByUid is null (unauthenticated), set it to the new user's own UID.
             createdByUid: data.createdByUid ?? userRecord.uid,
             status: "active",
             address: data.address,
@@ -91,14 +61,13 @@ export async function createUserAction(
             codeBalance: 0,
         };
 
-        // Create user document in Firestore
-        await firestore.collection("Dealers").doc(userRecord.uid).set(newUser);
+        await setDoc(doc(firestore, "Dealers", userRecord.uid), newUser);
         
         return { user: { ...newUser, uid: userRecord.uid } };
 
     } catch (e: any) {
         console.error("Error creating user:", e);
-        if (e.code === 'auth/email-already-exists') {
+        if (e.code === 'auth/email-already-in-use') {
             return { error: "This email address is already in use by another account." };
         }
         if (e.code === 'auth/phone-number-already-exists') {
@@ -108,36 +77,21 @@ export async function createUserAction(
     }
 }
 
-
+// Stubs for actions that are not implemented to avoid build errors.
 export interface DeleteUserState {
   success?: boolean;
   error?: string | null;
 }
 
-const DeleteUserSchema = z.object({
-  userId: z.string().min(1, { message: 'User ID is required.' }),
-});
-
-export async function deleteUserAction(
-  data: z.infer<typeof DeleteUserSchema>
-): Promise<DeleteUserState> {
-   return { error: "User deletion is not implemented yet." };
+export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
+  return { error: "User deletion is not implemented yet." };
 }
-
-const ManageCodeBalanceSchema = z.object({
-  targetUserId: z.string().min(1),
-  actorUid: z.string().min(1),
-  quantity: z.number().int().positive({ message: "Quantity must be a positive number." }),
-  actionType: z.enum(['assign', 'retrieve']),
-});
 
 export interface ManageCodeBalanceState {
   success?: string;
   error?: string | null;
 }
 
-export async function manageCodeBalanceAction(
-  data: z.infer<typeof ManageCodeBalanceSchema>
-): Promise<ManageCodeBalanceState> {
-    return { error: "Code balance management is not implemented yet." };
+export async function manageCodeBalanceAction(data: any): Promise<ManageCodeBalanceState> {
+  return { error: "Code balance management is not implemented yet." };
 }
