@@ -106,7 +106,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{dealersCount}</div>}
-              <p className="text-xs text-muted-foreground">Super & Distributor accounts</p>
+              <p className="text-xs text-muted-foreground">
+                Total accounts created
+              </p>
             </CardContent>
           </Card>
           <Card>
