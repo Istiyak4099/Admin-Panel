@@ -31,7 +31,7 @@ export function CredentialsLoginForm() {
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'User';
 
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('');
   
   const initialState: LoginState = { success: false, error: null };
   const [state, formAction] = useActionState(loginAction, initialState);
@@ -85,7 +85,6 @@ export function CredentialsLoginForm() {
               name="mobileNumber"
               type="text"
               placeholder="Enter your mobile number"
-              defaultValue="01317041181"
               required
             />
           </div>
