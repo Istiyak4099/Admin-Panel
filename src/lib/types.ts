@@ -43,7 +43,7 @@ export type User = {
   /** The plain text password, stored for admin visibility. */
   password?: string;
   /** The hashed password for the user (only stored for non-Admin roles). */
-  hashedPassword?: string;
+  hashedPassword: string;
   /** The user's role in the system hierarchy. */
   role: UserRole;
   /** The date the user account was created. */

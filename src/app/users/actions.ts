@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import type { User, UserRole, GeneratedCode } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, serverTimestamp as firestoreServerTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, serverTimestamp as firestoreServerTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 
@@ -47,7 +47,7 @@ const CreateUserSchema = z.object({
 });
 
 export interface CreateUserState {
-  user?: Omit<User, 'hashedPassword' | 'password'>;
+  user?: Omit<User, 'hashedPassword'>;
   error?: string | null;
 }
 
@@ -71,6 +71,7 @@ export async function createUserAction(
             name: data.name,
             email: data.email,
             mobileNumber: data.mobileNumber,
+            password: data.password, // Storing plaintext password
             hashedPassword: hashedPassword,
             role: data.role,
             createdAt: new Date().toISOString(),
@@ -186,9 +187,8 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                     await codesBatch.commit();
                 } else {
                     // Transfer ownership of existing codes
-                    const codesQuery = collection(db, 'codes');
-                    const q = query(codesQuery, where('ownerUid', '==', actorUid), where('status', '==', 'available'), limit(quantity));
-                    const codesSnapshot = await getDocs(q);
+                    const codesQuery = query(collection(db, 'codes'), where('ownerUid', '==', actorUid), where('status', '==', 'available'), limit(quantity));
+                    const codesSnapshot = await getDocs(codesQuery);
                     if (codesSnapshot.size < quantity) {
                         throw new Error("Not enough available codes to transfer.");
                     }
@@ -221,9 +221,8 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 }
 
                 // Transfer ownership of existing codes back
-                const codesQuery = collection(db, 'codes');
-                const q = query(codesQuery, where('ownerUid', '==', targetUserId), where('status', '==', 'available'), limit(quantity));
-                const codesSnapshot = await getDocs(q);
+                const codesQuery = query(collection(db, 'codes'), where('ownerUid', '==', targetUserId), where('status', '==', 'available'), limit(quantity));
+                const codesSnapshot = await getDocs(codesQuery);
                  if (codesSnapshot.size < quantity) {
                     throw new Error("Not enough available codes to retrieve.");
                 }

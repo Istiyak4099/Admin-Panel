@@ -61,7 +61,7 @@ function UserProfileSkeleton() {
               <CardDescription><Skeleton className="h-4 w-24" /></CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[...Array(5)].map((_, i) => (
+              {[...Array(6)].map((_, i) => (
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-4 w-20" />
                   <Skeleton className="h-5 w-40" />
@@ -266,6 +266,10 @@ export default function UserProfilePage() {
                 <p>{user.email}</p>
               </div>
               <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Password</p>
+                <p>{user.password}</p>
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Mobile</p>
                 <p>{user.mobileNumber}</p>
               </div>
@@ -339,7 +343,7 @@ export default function UserProfilePage() {
                 </div>
               </CodeListDialog>
                 {!isSelf && (
-                 <form action={handleCodeManagement} className="mt-4 space-y-2">
+                 <form onSubmit={(e) => { e.preventDefault(); handleCodeManagement(new FormData(e.currentTarget)); }} className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>
                   <div className="flex items-center gap-2">
                     <Input 
