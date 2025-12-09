@@ -7,7 +7,8 @@ import * as bcrypt from 'bcryptjs';
 import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
-import { getAdminApp } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
+
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -83,12 +84,22 @@ export interface DeleteUserState {
   error?: string | null;
 }
 
-export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
-  const adminApp = await getAdminApp();
-  if (!adminApp) {
-    return { error: "Server admin not initialized. Cannot delete user." };
+function getAdminApp() {
+  const serviceAccount = process.env.FIREBASE_ADMIN_SDK_CONFIG;
+  if (!serviceAccount) {
+    throw new Error("Server admin not initialized. Cannot delete user.");
   }
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+  return admin.initializeApp({
+    credential: admin.credential.cert(JSON.parse(serviceAccount)),
+  });
+}
+
+export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
   try {
+    const adminApp = getAdminApp();
     const auth = adminApp.auth();
     const firestore = adminApp.firestore();
 
