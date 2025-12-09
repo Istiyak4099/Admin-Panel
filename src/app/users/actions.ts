@@ -7,7 +7,7 @@ import * as bcrypt from 'bcryptjs';
 import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
-import * as admin from 'firebase-admin';
+import { deleteUser } from '@/ai/flows/delete-user';
 
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
@@ -84,31 +84,16 @@ export interface DeleteUserState {
   error?: string | null;
 }
 
-function getAdminApp() {
-  const serviceAccount = process.env.FIREBASE_ADMIN_SDK_CONFIG;
-  if (!serviceAccount) {
-    throw new Error("Server admin not initialized. Cannot delete user.");
-  }
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-  return admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(serviceAccount)),
-  });
-}
-
 export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
   try {
-    const adminApp = getAdminApp();
-    const auth = adminApp.auth();
-    const firestore = adminApp.firestore();
-
-    await auth.deleteUser(data.userId);
-    await firestore.collection("Dealers").doc(data.userId).delete();
-
-    return { success: true };
+    const result = await deleteUser({ userId: data.userId });
+    if (result.success) {
+      return { success: true };
+    }
+    // This case should ideally not be hit if the flow throws an error on failure
+    return { error: result.message || "An unknown error occurred." };
   } catch (error: any) {
-    console.error("Error deleting user:", error);
+    console.error("Error calling deleteUser flow:", error);
     return { error: error.message || "An unexpected error occurred during user deletion." };
   }
 }
