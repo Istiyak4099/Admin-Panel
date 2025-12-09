@@ -7,7 +7,6 @@ import * as bcrypt from 'bcryptjs';
 import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
-import { run } from 'genkit';
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -76,7 +75,6 @@ export async function createUserAction(
         return { error: e.message || "An unexpected server error occurred while creating the user." };
     }
 }
-
 
 const ManageCodeBalanceSchema = z.object({
     targetUserId: z.string(),

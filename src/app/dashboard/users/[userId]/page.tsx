@@ -45,7 +45,6 @@ import { manageCodeBalanceAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { CodeListDialog } from "@/components/code-list-dialog";
-import { run } from "genkit";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
@@ -183,25 +182,31 @@ export default function UserProfilePage() {
   const handleDelete = () => {
     startDeleteTransition(async () => {
       try {
-        const result: any = await run("deleteUserFlow", { userId });
-        if (result.error) {
-          toast({
-            variant: "destructive",
-            title: "Error deleting user",
-            description: result.error,
-          });
-        } else {
-          toast({
-            title: "User deleted successfully",
-            description: `User ${user?.name} has been removed.`,
-          });
-          router.push("/dashboard/users");
+        const response = await fetch('/api/delete-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'An unknown error occurred');
         }
+
+        toast({
+          title: "User deleted successfully",
+          description: `User ${user?.name} has been removed.`,
+        });
+        router.push("/dashboard/users");
+
       } catch (error: any) {
-         toast({
+        toast({
           variant: "destructive",
           title: "Error deleting user",
-          description: error.message || "An unexpected error occurred.",
+          description: error.message,
         });
       }
     });
