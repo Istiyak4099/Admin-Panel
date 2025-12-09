@@ -9,18 +9,12 @@ import * as admin from 'firebase-admin';
 
 // Helper function to initialize the app (avoids multiple initializations)
 function getAdminApp() {
-  const serviceAccount = process.env.FIREBASE_ADMIN_SDK_CONFIG;
-  if (!serviceAccount) {
-    throw new Error('The FIREBASE_ADMIN_SDK_CONFIG environment variable is not set.');
-  }
-
   if (admin.apps.length > 0) {
     return admin.app();
   }
-
-  return admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(serviceAccount)),
-  });
+  // When running in the Genkit environment, GOOGLE_APPLICATION_CREDENTIALS
+  // is automatically set. We can rely on application default credentials.
+  return admin.initializeApp();
 }
 
 
@@ -52,7 +46,10 @@ const deleteUserFlow = ai.defineFlow(
       const auth = adminApp.auth();
       const firestore = adminApp.firestore();
 
+      // 1. Delete user from Firebase Authentication
       await auth.deleteUser(userId);
+
+      // 2. Delete user's document from Firestore
       await firestore.collection("Dealers").doc(userId).delete();
       
       return { success: true, message: 'User deleted successfully.' };
