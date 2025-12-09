@@ -8,8 +8,6 @@ import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collecti
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { run } from 'genkit';
-import { deleteUserFlow } from '@/ai/flows/delete-user';
-
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -87,7 +85,7 @@ export interface DeleteUserState {
 
 export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
   try {
-    const result = await run(deleteUserFlow, { userId: data.userId });
+    const result = await run('deleteUserFlow', { userId: data.userId });
     if (result.success) {
       return { success: true };
     }
