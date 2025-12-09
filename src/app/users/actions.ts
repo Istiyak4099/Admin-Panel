@@ -78,24 +78,6 @@ export async function createUserAction(
 }
 
 
-export interface DeleteUserState {
-  success?: boolean;
-  error?: string | null;
-}
-
-export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
-  try {
-    const result = await run('deleteUserFlow', { userId: data.userId });
-    if (result.success) {
-      return { success: true };
-    }
-    return { error: result.message || "An unknown error occurred." };
-  } catch (error: any) {
-    console.error("Error calling deleteUser flow:", error);
-    return { error: error.message || "An unexpected error occurred during user deletion." };
-  }
-}
-
 const ManageCodeBalanceSchema = z.object({
     targetUserId: z.string(),
     actorUid: z.string(),
@@ -226,3 +208,5 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
         return { error: error.message || "An unexpected server error occurred." };
     }
 }
+
+    

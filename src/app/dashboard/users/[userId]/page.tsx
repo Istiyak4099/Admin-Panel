@@ -41,10 +41,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteUserAction, manageCodeBalanceAction } from "@/app/users/actions";
+import { manageCodeBalanceAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { CodeListDialog } from "@/components/code-list-dialog";
+import { run } from "genkit";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
@@ -181,19 +182,27 @@ export default function UserProfilePage() {
 
   const handleDelete = () => {
     startDeleteTransition(async () => {
-      const result = await deleteUserAction({ userId });
-      if (result.error) {
-        toast({
+      try {
+        const result: any = await run("deleteUserFlow", { userId });
+        if (result.error) {
+          toast({
+            variant: "destructive",
+            title: "Error deleting user",
+            description: result.error,
+          });
+        } else {
+          toast({
+            title: "User deleted successfully",
+            description: `User ${user?.name} has been removed.`,
+          });
+          router.push("/dashboard/users");
+        }
+      } catch (error: any) {
+         toast({
           variant: "destructive",
           title: "Error deleting user",
-          description: result.error,
+          description: error.message || "An unexpected error occurred.",
         });
-      } else {
-        toast({
-          title: "User deleted successfully",
-          description: `User ${user?.name} has been removed.`,
-        });
-        router.push("/dashboard/users");
       }
     });
   };
@@ -473,3 +482,5 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
+    
