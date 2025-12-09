@@ -7,16 +7,10 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import * as admin from 'firebase-admin';
 
-// Helper function to initialize the app (avoids multiple initializations)
-function getAdminApp() {
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-  // When running in the Genkit environment, GOOGLE_APPLICATION_CREDENTIALS
-  // is automatically set. We can rely on application default credentials.
-  return admin.initializeApp();
+// Initialize the app if it's not already initialized.
+if (admin.apps.length === 0) {
+  admin.initializeApp();
 }
-
 
 const DeleteUserInputSchema = z.object({
   userId: z.string().min(1, 'User ID is required.'),
@@ -42,9 +36,8 @@ const deleteUserFlow = ai.defineFlow(
   },
   async ({ userId }) => {
     try {
-      const adminApp = getAdminApp();
-      const auth = adminApp.auth();
-      const firestore = adminApp.firestore();
+      const auth = admin.auth();
+      const firestore = admin.firestore();
 
       // 1. Delete user from Firebase Authentication
       await auth.deleteUser(userId);
