@@ -4,33 +4,10 @@
 import { z } from 'zod';
 import type { User, UserRole, GeneratedCode } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, serverTimestamp as firestoreServerTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
-
-// Use a dynamic import for firebase-admin to avoid issues in client-side bundles
-let admin: typeof import('firebase-admin') | null = null;
-let adminApp: import('firebase-admin').app.App | null = null;
-
-async function initializeAdmin() {
-  if (!admin) {
-    admin = await import('firebase-admin');
-    const serviceAccount = process.env.FIREBASE_ADMIN_SDK_CONFIG;
-    if (serviceAccount) {
-      if (!admin.apps.length) {
-        adminApp = admin.initializeApp({
-          credential: admin.credential.cert(JSON.parse(serviceAccount)),
-        });
-      } else {
-        adminApp = admin.app();
-      }
-    } else {
-        console.warn("FIREBASE_ADMIN_SDK_CONFIG is not set. Admin features like user deletion will not work.");
-    }
-  }
-  return { admin, adminApp };
-}
-
+import { getAdminApp } from '@/lib/firebase-admin';
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -59,7 +36,7 @@ export async function createUserAction(
     }
     
     try {
-        const auth = getAuth(firebaseApp);
+        const auth = getClientAuth(firebaseApp);
         const firestore = getFirestore(firebaseApp);
 
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -107,7 +84,7 @@ export interface DeleteUserState {
 }
 
 export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
-  const { adminApp } = await initializeAdmin();
+  const adminApp = await getAdminApp();
   if (!adminApp) {
     return { error: "Server admin not initialized. Cannot delete user." };
   }
