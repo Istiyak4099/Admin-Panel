@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileoverview A flow for deleting a user from Firebase Authentication and Firestore.
  */
@@ -23,10 +23,6 @@ const DeleteUserOutputSchema = z.object({
 
 export type DeleteUserInput = z.infer<typeof DeleteUserInputSchema>;
 export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
-
-export async function deleteUser(input: DeleteUserInput): Promise<DeleteUserOutput> {
-  return deleteUserFlow(input);
-}
 
 const deleteUserFlow = ai.defineFlow(
   {

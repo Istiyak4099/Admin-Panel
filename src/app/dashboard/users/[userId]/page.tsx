@@ -198,7 +198,7 @@ export default function UserProfilePage() {
     });
   };
 
-  const handleCodeManagement = (formData: FormData) => {
+  const handleCodeManagement = (actionType: 'assign' | 'retrieve') => {
     if (!actor) {
         toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to perform this action.' });
         return;
@@ -209,7 +209,6 @@ export default function UserProfilePage() {
       toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid positive number.' });
       return;
     }
-    const actionType = formData.get('actionType') as 'assign' | 'retrieve';
     
     startCodeActionTransition(async () => {
       const result = await manageCodeBalanceAction({
@@ -343,7 +342,7 @@ export default function UserProfilePage() {
                 </div>
               </CodeListDialog>
                 {!isSelf && (
-                 <form onSubmit={(e) => { e.preventDefault(); handleCodeManagement(new FormData(e.currentTarget)); }} className="mt-4 space-y-2">
+                 <div className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>
                   <div className="flex items-center gap-2">
                     <Input 
@@ -357,16 +356,16 @@ export default function UserProfilePage() {
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                     />
-                    <Button type="submit" name="actionType" value="assign" disabled={codeActionPending || !quantity}>
+                    <Button onClick={() => handleCodeManagement('assign')} disabled={codeActionPending || !quantity}>
                       {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowDown />}
                        <span className="hidden sm:inline ml-2">Assign</span>
                     </Button>
-                    <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending || !quantity}>
+                    <Button onClick={() => handleCodeManagement('retrieve')} variant="outline" disabled={codeActionPending || !quantity}>
                       {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
                        <span className="hidden sm:inline ml-2">Retrieve</span>
                     </Button>
                   </div>
-                </form>
+                </div>
                 )}
             </CardContent>
           </Card>

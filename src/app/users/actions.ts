@@ -7,7 +7,8 @@ import * as bcrypt from 'bcryptjs';
 import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
-import { deleteUser } from '@/ai/flows/delete-user';
+import { run } from 'genkit';
+import { deleteUserFlow } from '@/ai/flows/delete-user';
 
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
@@ -86,11 +87,10 @@ export interface DeleteUserState {
 
 export async function deleteUserAction(data: { userId: string }): Promise<DeleteUserState> {
   try {
-    const result = await deleteUser({ userId: data.userId });
+    const result = await run(deleteUserFlow, { userId: data.userId });
     if (result.success) {
       return { success: true };
     }
-    // This case should ideally not be hit if the flow throws an error on failure
     return { error: result.message || "An unknown error occurred." };
   } catch (error: any) {
     console.error("Error calling deleteUser flow:", error);
