@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow anyone to query the Dealers collection to find their email for login
+    // and allow anyone to create a new user document.
+    match /Dealers/{dealerId} {
+      allow read, create: if true;
+      allow update, delete: if request.auth != null; // Only authenticated users can update/delete
+    }
+
+    // For all other documents in the database, require the user to be authenticated.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
