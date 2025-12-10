@@ -12,12 +12,14 @@ import {
   Users,
   FileText,
   LifeBuoy,
+  User,
 } from "lucide-react";
 import { useSidebar } from "./ui/sidebar";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/users", icon: Users, label: "User Accounts" },
+  { href: "/dashboard/profile", icon: User, label: "My Profile" },
   { href: "/dashboard/activity", icon: FileText, label: "Activity Logs" },
   { href: "/dashboard/support", icon: LifeBuoy, label: "Support Info" },
 ];
