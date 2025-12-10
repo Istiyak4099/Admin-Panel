@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -99,28 +100,32 @@ export default function DashboardPage() {
       <DashboardHeader title="Dashboard" />
       <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Dealers</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{dealersCount}</div>}
-              <p className="text-xs text-muted-foreground">
-                Total accounts created
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{retailersCount}</div>}
-              <p className="text-xs text-muted-foreground">Retailer accounts created</p>
-            </CardContent>
-          </Card>
+          <Link href="/dashboard/users">
+            <Card className="transition-colors hover:bg-muted/50 cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Dealers</CardTitle>
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{dealersCount}</div>}
+                <p className="text-xs text-muted-foreground">
+                  Total accounts created
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/users">
+            <Card className="transition-colors hover:bg-muted/50 cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{retailersCount}</div>}
+                <p className="text-xs text-muted-foreground">Retailer accounts created</p>
+              </CardContent>
+            </Card>
+          </Link>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Balance Keys</CardTitle>

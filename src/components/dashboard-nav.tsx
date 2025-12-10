@@ -12,13 +12,11 @@ import {
   Users,
   FileText,
   LifeBuoy,
-  KeyRound,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/users", icon: Users, label: "User Accounts" },
-  { href: "/dashboard/balance-keys", icon: KeyRound, label: "Balance Keys" },
   { href: "/dashboard/activity", icon: FileText, label: "Activity Logs" },
   { href: "/dashboard/support", icon: LifeBuoy, label: "Support Info" },
 ];
