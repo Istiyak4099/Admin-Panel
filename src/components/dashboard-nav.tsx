@@ -13,6 +13,7 @@ import {
   FileText,
   LifeBuoy,
 } from "lucide-react";
+import { useSidebar } from "./ui/sidebar";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -23,12 +24,13 @@ const navItems = [
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
 
   return (
     <SidebarMenu>
       {navItems.map((item) => (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
+          <Link href={item.href} onClick={() => setOpenMobile(false)}>
             <SidebarMenuButton
               isActive={pathname === item.href}
               tooltip={item.label}
