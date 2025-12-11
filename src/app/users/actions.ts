@@ -76,6 +76,51 @@ export async function createUserAction(
     }
 }
 
+
+const DeleteUserSchema = z.object({
+  userId: z.string(),
+});
+
+export interface DeleteUserState {
+  success?: boolean;
+  error?: string | null;
+}
+
+export async function deleteUserAction(data: z.infer<typeof DeleteUserSchema>): Promise<DeleteUserState> {
+  const validation = DeleteUserSchema.safeParse(data);
+  if (!validation.success) {
+    return { error: "Invalid data provided for deletion." };
+  }
+
+  const { userId } = validation.data;
+
+  try {
+    // We are calling our internal API route that wraps the Genkit flow.
+    // This assumes the app is running on localhost, which is true for the dev environment.
+    // In production, the base URL would need to be the production domain.
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : 'http://localhost:9002';
+      
+    const response = await fetch(`${baseUrl}/api/delete-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'The deletion process failed.');
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error in deleteUserAction:', error);
+    return { error: error.message || 'An unexpected error occurred.' };
+  }
+}
+
 const ManageCodeBalanceSchema = z.object({
     targetUserId: z.string(),
     actorUid: z.string(),
@@ -206,5 +251,3 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
         return { error: error.message || "An unexpected server error occurred." };
     }
 }
-
-    
