@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -51,7 +52,7 @@ const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 function UserProfileSkeleton() {
   return (
-    <div className="flex flex-1 flex-col">
+    <>
       <DashboardHeader title={<Skeleton className="h-8 w-48" />} />
       <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -90,7 +91,7 @@ function UserProfileSkeleton() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </>
   );
 }
 
@@ -235,19 +236,19 @@ export default function UserProfilePage() {
 
   if (!user) {
     return (
-      <div className="flex flex-1 flex-col">
+      <>
         <DashboardHeader title="User Not Found" />
         <main className="flex-1 p-4 pt-6 md:p-8">
           <p>The requested user could not be found. They may have been deleted.</p>
         </main>
-      </div>
+      </>
     );
   }
 
   const isSelf = actor?.uid === user.uid;
 
   return (
-    <div className="flex flex-1 flex-col">
+    <>
       <DashboardHeader title={user.name} />
       <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -467,6 +468,6 @@ export default function UserProfilePage() {
             </Card>
         )}
       </main>
-    </div>
+    </>
   );
 }
