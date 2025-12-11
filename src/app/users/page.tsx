@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -88,8 +89,8 @@ export default function UsersPage() {
   }, [currentUser]);
 
   return (
-    <div className="flex flex-1 flex-col">
-      <DashboardHeader title="User Accounts">
+    <>
+       <DashboardHeader title="User Accounts">
         <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1">
@@ -189,6 +190,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </>
   );
 }
+
