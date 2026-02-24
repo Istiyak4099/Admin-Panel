@@ -80,3 +80,10 @@ export type Device = {
   status: "generated" | "transferred" | "returned";
   lastActivity: string;
 };
+
+export interface AuthUser {
+  userId: string
+  mobileNumber: string
+  iat: number
+  exp: number
+}
