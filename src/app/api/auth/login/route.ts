@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-admin";
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 
@@ -16,8 +16,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Query Firestore "Dealers" collection
-    const usersRef = db.collection("Dealers");
-    const snapshot = await usersRef.where("mobileNumber", "==", mobileNumber).limit(1).get();
+    const snapshot = await db
+      .collection("Dealers")
+      .where("mobileNumber", "==", mobileNumber)
+      .limit(1)
+      .get();
 
     if (snapshot.empty) {
       return NextResponse.json(
