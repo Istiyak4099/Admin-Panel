@@ -1,12 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { db } from "@/lib/firebase-admin";
+import { db } from "@/lib/firebase";
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-import { setCorsHeaders } from "@/lib/cors";
 
-export async function OPTIONS(request: NextRequest) {
-  const response = new NextResponse(null, { status: 200 });
-  return setCorsHeaders(response, request);
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*", // Allow all origins or specify Retailer-App origin
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { status: 200, headers: corsHeaders });
 }
 
 export async function POST(request: NextRequest) {
@@ -15,26 +19,21 @@ export async function POST(request: NextRequest) {
 
     // 2. Validate fields are present
     if (!mobileNumber || !password) {
-      const res = NextResponse.json(
+      return NextResponse.json(
         { error: "All fields are required" },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
-      return setCorsHeaders(res, request);
     }
 
     // 3. Query Firestore "Dealers" collection
-    const snapshot = await db
-      .collection("Dealers")
-      .where("mobileNumber", "==", mobileNumber)
-      .limit(1)
-      .get();
+    const usersRef = db.collection("Dealers");
+    const snapshot = await usersRef.where("mobileNumber", "==", mobileNumber).limit(1).get();
 
     if (snapshot.empty) {
-      const res = NextResponse.json(
+      return NextResponse.json(
         { error: "Invalid mobile number or password" },
-        { status: 401 }
+        { status: 401, headers: corsHeaders }
       );
-      return setCorsHeaders(res, request);
     }
 
     const doc = snapshot.docs[0];
@@ -42,22 +41,20 @@ export async function POST(request: NextRequest) {
     
     // The user document should have a 'hashedPassword' field for secure authentication.
     if (!user.hashedPassword) {
-      const res = NextResponse.json(
+      return NextResponse.json(
         { error: "User account is not configured correctly for authentication." },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
-      return setCorsHeaders(res, request);
     }
 
     // 4. Compare password
     const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
 
     if (!isPasswordValid) {
-      const res = NextResponse.json(
+      return NextResponse.json(
         { error: "Invalid mobile number or password" },
-        { status: 401 }
+        { status: 401, headers: corsHeaders }
       );
-      return setCorsHeaders(res, request);
     }
 
     // 5. Sign JWT
@@ -75,17 +72,15 @@ export async function POST(request: NextRequest) {
     );
 
     // 6. Return success response
-    const response = NextResponse.json(
+    return NextResponse.json(
       { token, userId: doc.id, mobileNumber: user.mobileNumber, role: user.role },
-      { status: 200 }
+      { status: 200, headers: corsHeaders }
     );
-    return setCorsHeaders(response, request);
 
   } catch (error) {
     // 7. Error handling
     console.error("Login error:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const res = NextResponse.json({ error: `An internal server error occurred: ${errorMessage}` }, { status: 500 });
-    return setCorsHeaders(res, request);
+    return NextResponse.json({ error: `An internal server error occurred: ${errorMessage}` }, { status: 500, headers: corsHeaders });
   }
 }
