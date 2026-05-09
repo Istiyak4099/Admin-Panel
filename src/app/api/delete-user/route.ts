@@ -1,4 +1,4 @@
-import { run } from 'genkit';
+import { deleteUser } from '@/ai/flows/delete-user';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -9,12 +9,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const result: any = await run('deleteUserFlow', { userId });
+    const result = await deleteUser({ userId });
     
     if (result.success) {
       return NextResponse.json({ success: true, message: result.message });
     } else {
-      // The flow itself should throw, but handle cases where it might return an error message
       return NextResponse.json({ error: result.message || 'An unknown error occurred in the deletion flow.' }, { status: 500 });
     }
 
@@ -23,5 +22,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message || 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
-
-    
