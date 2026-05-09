@@ -151,7 +151,8 @@ export default function UserProfilePage() {
           ];
           setManagedUsers(managedList);
 
-          const transfersQuery = query(collection(db, userDocRef.path, "transfers"), orderBy("date", "desc"));
+          // Correct subcollection path usage
+          const transfersQuery = query(collection(userDocRef, "transfers"), orderBy("date", "desc"));
           const transfersSnapshot = await getDocs(transfersQuery);
           setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 

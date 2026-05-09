@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(res, request);
     }
 
-    // NEW LOGIC: Search in both Dealers and Retailers collections
+    // Check both Dealers and Retailers collections
     let userDoc = null;
     let foundCollection = '';
 
