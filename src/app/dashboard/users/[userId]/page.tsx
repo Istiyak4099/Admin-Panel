@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { manageCodeBalanceAction } from "@/app/users/actions";
+import { deleteUserAction, manageCodeBalanceAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { CodeListDialog } from "@/components/code-list-dialog";
@@ -123,16 +123,35 @@ export default function UserProfilePage() {
     const fetchData = async () => {
       setPageLoading(true);
       try {
-        const userDocRef = doc(db, "Dealers", userId);
-        const userDoc = await getDoc(userDocRef);
+        // Check both collections for the target user
+        let userDocRef = doc(db, "Dealers", userId);
+        let userDoc = await getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+           userDocRef = doc(db, "Retailers", userId);
+           userDoc = await getDoc(userDocRef);
+        }
+
         if (userDoc.exists()) {
-          setUser({ ...userDoc.data(), uid: userDoc.id } as User);
+          const userData = { ...userDoc.data(), uid: userDoc.id } as User;
+          setUser(userData);
 
-          const managedUsersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
-          const managedUsersSnapshot = await getDocs(managedUsersQuery);
-          setManagedUsers(managedUsersSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
+          // Fetch users created by THIS user (check both Dealers and Retailers)
+          const dealersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
+          const retailersQuery = query(collection(db, "Retailers"), where("createdByUid", "==", userId));
+          
+          const [dealersSnap, retailersSnap] = await Promise.all([
+            getDocs(dealersQuery),
+            getDocs(retailersQuery)
+          ]);
+          
+          const managedList = [
+             ...dealersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)),
+             ...retailersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User))
+          ];
+          setManagedUsers(managedList);
 
-          const transfersQuery = query(collection(db, "Dealers", userId, "transfers"), orderBy("date", "desc"));
+          const transfersQuery = query(collection(db, userDocRef.path, "transfers"), orderBy("date", "desc"));
           const transfersSnapshot = await getDocs(transfersQuery);
           setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
@@ -160,8 +179,15 @@ export default function UserProfilePage() {
       setActor(user);
       if (user) {
         try {
-          const actorDocRef = doc(db, 'Dealers', user.uid);
-          const actorDoc = await getDoc(actorDocRef);
+          // Check both collections for the actor profile
+          let actorDocRef = doc(db, 'Dealers', user.uid);
+          let actorDoc = await getDoc(actorDocRef);
+          
+          if (!actorDoc.exists()) {
+            actorDocRef = doc(db, 'Retailers', user.uid);
+            actorDoc = await getDoc(actorDocRef);
+          }
+
           if (actorDoc.exists()) {
             setActorProfile({ uid: user.uid, ...actorDoc.data() } as User);
           } else {
@@ -181,38 +207,24 @@ export default function UserProfilePage() {
 
   const handleDelete = () => {
     startDeleteTransition(async () => {
-      try {
-        const response = await fetch('/api/delete-user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId }),
+      const result = await deleteUserAction({ userId });
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "Error deleting user",
+          description: result.error,
         });
-        
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'An unknown error occurred');
-        }
-
+      } else {
         toast({
           title: "User deleted successfully",
           description: `User ${user?.name} has been removed.`,
         });
         router.push("/dashboard/users");
-
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error deleting user",
-          description: error.message,
-        });
       }
     });
   };
 
-  const handleCodeManagement = (actionType: 'assign' | 'retrieve') => {
+  const handleCodeManagement = (formData: FormData) => {
     if (!actor) {
         toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to perform this action.' });
         return;
@@ -223,6 +235,7 @@ export default function UserProfilePage() {
       toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid positive number.' });
       return;
     }
+    const actionType = formData.get('actionType') as 'assign' | 'retrieve';
     
     startCodeActionTransition(async () => {
       const result = await manageCodeBalanceAction({
@@ -279,10 +292,6 @@ export default function UserProfilePage() {
                 <p>{user.email}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Password</p>
-                <p>{user.password}</p>
-              </div>
-              <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Mobile</p>
                 <p>{user.mobileNumber}</p>
               </div>
@@ -309,8 +318,7 @@ export default function UserProfilePage() {
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This action cannot be undone. This will permanently delete the user
-                          account and remove their data from our servers. They will no longer
-                          be able to log in.
+                          account and remove their data from our servers.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -338,7 +346,7 @@ export default function UserProfilePage() {
               <CardDescription>
                 {actorProfile?.role === 'Admin'
                   ? 'Generate new codes by assigning them to this user.'
-                  : `Assign or retrieve codes from this user. Your current balance: ${actorProfile?.codeBalance ?? 0}`}
+                  : `Assign or retrieve codes. Your current balance: ${actorProfile?.codeBalance ?? 0}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -356,7 +364,7 @@ export default function UserProfilePage() {
                 </div>
               </CodeListDialog>
                 {!isSelf && (
-                 <div className="mt-4 space-y-2">
+                 <form action={handleCodeManagement} className="mt-4 space-y-2">
                   <Label htmlFor="code-quantity">Quantity</Label>
                   <div className="flex items-center gap-2">
                     <Input 
@@ -370,16 +378,16 @@ export default function UserProfilePage() {
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                     />
-                    <Button onClick={() => handleCodeManagement('assign')} disabled={codeActionPending || !quantity}>
+                    <Button type="submit" name="actionType" value="assign" disabled={codeActionPending || !quantity}>
                       {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowDown />}
                        <span className="hidden sm:inline ml-2">Assign</span>
                     </Button>
-                    <Button onClick={() => handleCodeManagement('retrieve')} variant="outline" disabled={codeActionPending || !quantity}>
+                    <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending || !quantity}>
                       {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
                        <span className="hidden sm:inline ml-2">Retrieve</span>
                     </Button>
                   </div>
-                </div>
+                </form>
                 )}
             </CardContent>
           </Card>
@@ -487,4 +495,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-    

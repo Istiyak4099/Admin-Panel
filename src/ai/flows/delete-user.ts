@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview A flow for deleting a user from Firebase Authentication and Firestore.
  */
@@ -38,13 +37,24 @@ const deleteUserFlow = ai.defineFlow(
       // 1. Delete user from Firebase Authentication
       await auth.deleteUser(userId);
 
-      // 2. Delete user's document from Firestore
-      await firestore.collection("Dealers").doc(userId).delete();
+      // 2. Delete user's document from Firestore (Check both collections)
+      const dealersRef = firestore.collection("Dealers").doc(userId);
+      const retailersRef = firestore.collection("Retailers").doc(userId);
+      
+      const [dealerDoc, retailerDoc] = await Promise.all([
+          dealersRef.get(),
+          retailersRef.get()
+      ]);
+
+      if (dealerDoc.exists) {
+          await dealersRef.delete();
+      } else if (retailerDoc.exists) {
+          await retailersRef.delete();
+      }
       
       return { success: true, message: 'User deleted successfully.' };
     } catch (error: any) {
       console.error('Error in deleteUserFlow:', error);
-      // It's important to throw the error so the calling action knows it failed.
       throw new Error(error.message || 'An unexpected error occurred during user deletion.');
     }
   }

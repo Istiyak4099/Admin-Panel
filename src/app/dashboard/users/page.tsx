@@ -52,8 +52,6 @@ export default function UsersPage() {
     const unsubscribe = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
       if (!user) {
-        // If no user is logged in, we should still stop loading
-        // but can't fetch managed users.
         setLoading(false);
         setManagedUsers([]);
       }
@@ -62,9 +60,7 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    // If there's no current user, don't try to fetch.
     if (!currentUser || !db) {
-        // If we know there's no user, stop loading.
         if (!currentUser) setLoading(false);
         return;
     };
@@ -72,11 +68,22 @@ export default function UsersPage() {
     const fetchManagedUsers = async () => {
       setLoading(true);
       try {
-        const usersRef = collection(db, "Dealers");
-        const q = query(usersRef, where("createdByUid", "==", currentUser.uid));
-        const querySnapshot = await getDocs(q);
-        const usersList = querySnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
-        setManagedUsers(usersList);
+        // Fetch from BOTH collections
+        const dealersRef = collection(db, "Dealers");
+        const retailersRef = collection(db, "Retailers");
+        
+        const dq = query(dealersRef, where("createdByUid", "==", currentUser.uid));
+        const rq = query(retailersRef, where("createdByUid", "==", currentUser.uid));
+        
+        const [dealersSnap, retailersSnap] = await Promise.all([
+          getDocs(dq),
+          getDocs(rq)
+        ]);
+
+        const dealersList = dealersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
+        const retailersList = retailersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
+        
+        setManagedUsers([...dealersList, ...retailersList]);
       } catch (error) {
         console.error("Error fetching managed users: ", error);
       } finally {
@@ -103,12 +110,11 @@ export default function UsersPage() {
             <DialogHeader>
               <DialogTitle>Create a new user</DialogTitle>
               <DialogDescription>
-                Fill out the form to add a new user to Firebase Auth and Firestore.
+                Add a new Dealer or Retailer account.
               </DialogDescription>
             </DialogHeader>
             <CreateUserForm onSuccess={() => {
               setIsCreateUserOpen(false);
-              // Trigger a refetch if a user is logged in
               if (auth?.currentUser) {
                 setCurrentUser(auth?.currentUser);
               }
@@ -121,7 +127,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Viewing users you have created. Click a user to see their full profile.
+              Users you have created (Dealers & Retailers).
             </CardDescription>
           </CardHeader>
           <CardContent>

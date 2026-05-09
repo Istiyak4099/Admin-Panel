@@ -18,7 +18,6 @@ export interface LoginState {
   error?: string | null;
   user?: {
     email: string;
-    // Do not send password back to client
   };
 }
 
@@ -46,16 +45,25 @@ export async function loginAction(
   const { mobileNumber, password } = validatedFields.data;
 
   try {
-    const usersRef = collection(db, 'Dealers');
-    const q = query(usersRef, where('mobileNumber', '==', mobileNumber), limit(1));
-    const querySnapshot = await getDocs(q);
+    // Check BOTH Dealers and Retailers collections
+    let user = null;
 
-    if (querySnapshot.empty) {
-      return { error: 'Invalid mobile number or password.' };
+    const dq = query(collection(db, 'Dealers'), where('mobileNumber', '==', mobileNumber), limit(1));
+    const dealersSnap = await getDocs(dq);
+    
+    if (!dealersSnap.empty) {
+      user = dealersSnap.docs[0].data() as User;
+    } else {
+      const rq = query(collection(db, 'Retailers'), where('mobileNumber', '==', mobileNumber), limit(1));
+      const retailersSnap = await getDocs(rq);
+      if (!retailersSnap.empty) {
+        user = retailersSnap.docs[0].data() as User;
+      }
     }
 
-    const userDoc = querySnapshot.docs[0];
-    const user = userDoc.data() as User;
+    if (!user) {
+      return { error: 'Invalid mobile number or password.' };
+    }
 
     if (!user.hashedPassword) {
         return { error: 'User data is incomplete. Cannot verify password.' };
@@ -67,7 +75,6 @@ export async function loginAction(
       return { error: 'Invalid mobile number or password.' };
     }
     
-    // Password is valid, return user email to client to complete sign-in
     return { 
         success: true, 
         user: { email: user.email }

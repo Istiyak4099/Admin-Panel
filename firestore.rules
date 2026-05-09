@@ -9,6 +9,12 @@ service cloud.firestore {
       allow read, create: if true;
       allow update, delete: if request.auth != null; // Only authenticated users can update/delete
     }
+    
+    // Similarly for Retailers
+    match /Retailers/{retailerId} {
+      allow read, create: if true;
+      allow update, delete: if request.auth != null;
+    }
 
     // For all other documents in the database, require the user to be authenticated.
     match /{document=**} {

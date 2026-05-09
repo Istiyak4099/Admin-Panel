@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -44,37 +43,37 @@ export default function DashboardPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user: AuthUser | null) => {
       if (user) {
         try {
-          // Fetch current user's full profile
-          const userDocRef = doc(db, 'Dealers', user.uid);
-          const userDoc = await getDoc(userDocRef);
+          // Fetch current user profile - check both collections
+          let userDocRef = doc(db, 'Dealers', user.uid);
+          let userDoc = await getDoc(userDocRef);
+          
+          if (!userDoc.exists()) {
+             userDocRef = doc(db, 'Retailers', user.uid);
+             userDoc = await getDoc(userDocRef);
+          }
           
           if (userDoc.exists()) {
             const userProfile = { uid: user.uid, ...userDoc.data() } as AppUser;
             setCurrentUser(userProfile);
 
-            // Fetch users created by the current user
-            const usersRef = collection(db, "Dealers");
-            const q = query(usersRef, where("createdByUid", "==", user.uid));
-            const querySnapshot = await getDocs(q);
+            // Fetch managed users from BOTH collections
+            const dealersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", user.uid));
+            const retailersQuery = query(collection(db, "Retailers"), where("createdByUid", "==", user.uid));
             
-            let dealers = 0;
-            let retailers = 0;
-            const managedUsersList = querySnapshot.docs.map(doc => {
-              const userData = { ...doc.data(), uid: doc.id } as AppUser;
-              if (userData.role === 'Retailer') {
-                retailers++;
-              } else {
-                dealers++;
-              }
-              return userData;
-            });
+            const [dealersSnap, retailersSnap] = await Promise.all([
+              getDocs(dealersQuery),
+              getDocs(retailersQuery)
+            ]);
+            
+            const managedDealers = dealersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as AppUser));
+            const managedRetailers = retailersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as AppUser));
+            
+            setDealersCount(managedDealers.length);
+            setRetailersCount(managedRetailers.length);
 
-            setDealersCount(dealers);
-            setRetailersCount(retailers);
-
-            // Sort by creation date and get the 5 most recent
-            managedUsersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            setRecentUsers(managedUsersList.slice(0, 5));
+            const allManagedUsers = [...managedDealers, ...managedRetailers];
+            allManagedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setRecentUsers(allManagedUsers.slice(0, 5));
 
           } else {
              setCurrentUser(null);
@@ -109,7 +108,7 @@ export default function DashboardPage() {
               <CardContent>
                 {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{dealersCount}</div>}
                 <p className="text-xs text-muted-foreground">
-                  Total accounts created
+                  Dealer/Super/Admin accounts
                 </p>
               </CardContent>
             </Card>
@@ -117,7 +116,7 @@ export default function DashboardPage() {
           <Link href="/dashboard/users">
             <Card className="transition-colors hover:bg-muted/50 cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Users</CardTitle>
+                <CardTitle className="text-sm font-medium">Retailers</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -145,14 +144,14 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{currentUser?.role ?? 'Guest'}</div>}
-              <p className="text-xs text-muted-foreground">Your access level in the system</p>
+              <p className="text-xs text-muted-foreground">Your access level</p>
             </CardContent>
           </Card>
         </div>
         <Card>
           <CardHeader>
             <CardTitle>Recently Joined Users</CardTitle>
-            <CardDescription>An overview of the newest members you've added.</CardDescription>
+            <CardDescription>Newest members you've added (Dealers & Retailers).</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -183,7 +182,7 @@ export default function DashboardPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
-                      No recent users. Create a new user to get started.
+                      No recent users.
                     </TableCell>
                   </TableRow>
                 )}
@@ -195,5 +194,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

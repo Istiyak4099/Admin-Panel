@@ -1,4 +1,3 @@
-
 'use client';
 
 import { getAuth, signOut, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
@@ -24,15 +23,20 @@ import { cn } from '@/lib/utils';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
-const firebaseConfigError = "Firebase is not configured. Please add your client-side Firebase project configuration to the .env file.";
 
 async function fetchUserProfile(uid: string): Promise<User | null> {
-  if (!db) {
-    console.warn("Firestore is not initialized for user profile fetch.");
-    return null;
+  if (!db) return null;
+  
+  // Try Dealers first
+  let userDocRef = doc(db, 'Dealers', uid);
+  let userDoc = await getDoc(userDocRef);
+  
+  if (!userDoc.exists()) {
+    // Try Retailers
+    userDocRef = doc(db, 'Retailers', uid);
+    userDoc = await getDoc(userDocRef);
   }
-  const userDocRef = doc(db, 'Dealers', uid);
-  const userDoc = await getDoc(userDocRef);
+
   if (userDoc.exists()) {
     return { uid: userDoc.id, ...userDoc.data() } as User;
   }
@@ -50,25 +54,13 @@ export function UserNav() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    if (!auth) {
-      toast({
-        variant: 'destructive',
-        title: 'Configuration Error',
-        description: firebaseConfigError,
-      });
-      return;
-    }
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({ title: 'Logged out successfully.' });
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Logout Failed',
-        description: 'An unexpected error occurred.',
-      });
     }
   }, [toast]);
 
@@ -106,9 +98,7 @@ export function UserNav() {
     </div>
   );
   
-  if (!mounted || loading) {
-    return skeleton;
-  }
+  if (!mounted || loading) return skeleton;
 
   if (!currentUser) {
     return (
@@ -119,7 +109,7 @@ export function UserNav() {
                 </Avatar>
                 <div className="text-left group-data-[collapsible=icon]:hidden">
                     <p className="text-sm font-medium">Guest</p>
-                    <p className="text-sm text-muted-foreground">Click to log in</p>
+                    <p className="text-sm text-muted-foreground">Log in</p>
                 </div>
             </Button>
         </Link>
@@ -136,7 +126,7 @@ export function UserNav() {
             "group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
             )}>
           <Avatar className="h-8 w-8">
-            <AvatarImage src={`https://placehold.co/40x40.png?text=${fallback}`} alt={currentUser.name} data-ai-hint="person user" />
+            <AvatarImage src={`https://placehold.co/40x40.png?text=${fallback}`} alt={currentUser.name} />
             <AvatarFallback>{fallback}</AvatarFallback>
           </Avatar>
           <div className="text-left group-data-[collapsible=icon]:hidden">

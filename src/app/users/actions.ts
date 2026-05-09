@@ -1,4 +1,3 @@
-
 "use server";
 
 import { z } from 'zod';
@@ -60,7 +59,9 @@ export async function createUserAction(
             codeBalance: 0,
         };
 
-        await setDoc(doc(firestore, "Dealers", userRecord.uid), newUser);
+        // NEW LOGIC: Determine collection based on role
+        const collectionName = data.role === 'Retailer' ? 'Retailers' : 'Dealers';
+        await setDoc(doc(firestore, collectionName, userRecord.uid), newUser);
         
         return { user: { ...newUser, uid: userRecord.uid } };
 
@@ -95,9 +96,6 @@ export async function deleteUserAction(data: z.infer<typeof DeleteUserSchema>): 
   const { userId } = validation.data;
 
   try {
-    // We are calling our internal API route that wraps the Genkit flow.
-    // This assumes the app is running on localhost, which is true for the dev environment.
-    // In production, the base URL would need to be the production domain.
     const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
       ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
       : 'http://localhost:9002';
@@ -145,13 +143,21 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
 
     try {
         await runTransaction(db, async (transaction) => {
-            const actorRef = doc(db, "Dealers", actorUid);
-            const targetRef = doc(db, "Dealers", targetUserId);
-            
-            const [actorDoc, targetDoc] = await Promise.all([
-                transaction.get(actorRef),
-                transaction.get(targetRef)
-            ]);
+            // Find actor ref by checking both collections
+            let actorRef = doc(db, "Dealers", actorUid);
+            let actorDoc = await transaction.get(actorRef);
+            if (!actorDoc.exists()) {
+                actorRef = doc(db, "Retailers", actorUid);
+                actorDoc = await transaction.get(actorRef);
+            }
+
+            // Find target ref by checking both collections
+            let targetRef = doc(db, "Dealers", targetUserId);
+            let targetDoc = await transaction.get(targetRef);
+            if (!targetDoc.exists()) {
+                targetRef = doc(db, "Retailers", targetUserId);
+                targetDoc = await transaction.get(targetRef);
+            }
 
             if (!actorDoc.exists() || !targetDoc.exists()) {
                 throw new Error("One or both users not found.");
