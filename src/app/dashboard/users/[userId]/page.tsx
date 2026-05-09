@@ -52,7 +52,7 @@ const auth = firebaseApp ? getAuth(firebaseApp) : null;
 function UserProfileSkeleton() {
   return (
     <div className="flex flex-1 flex-col">
-      <DashboardHeader title={<Skeleton className="h-8 w-48" />} />
+      <DashboardHeader title="Loading..." />
       <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card className="lg:col-span-1">
@@ -116,19 +116,26 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (!userId || !db) {
-      setPageLoading(false);
+      if (!userId) setPageLoading(false);
       return;
     }
 
     const fetchData = async () => {
       setPageLoading(true);
       try {
-        // Check both collections for the target user
+        // Try Dealers first
         let userDocRef = doc(db, "Dealers", userId);
         let userDoc = await getDoc(userDocRef);
         
+        // Try Retailers if not found
         if (!userDoc.exists()) {
            userDocRef = doc(db, "Retailers", userId);
+           userDoc = await getDoc(userDocRef);
+        }
+
+        // Final fallback to legacy 'users' collection
+        if (!userDoc.exists()) {
+           userDocRef = doc(db, "users", userId);
            userDoc = await getDoc(userDocRef);
         }
 
@@ -151,17 +158,18 @@ export default function UserProfilePage() {
           ];
           setManagedUsers(managedList);
 
-          // Correct subcollection path usage
+          // Fetch transfers from subcollection
           const transfersQuery = query(collection(userDocRef, "transfers"), orderBy("date", "desc"));
-          const transfersSnapshot = await getDocs(transfersQuery);
+          const transfersSnapshot = await getDocs(transfersQuery).catch(() => ({ docs: [] })); // Handle missing index gracefully
           setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
         } else {
+            console.warn(`User with ID ${userId} not found in any collection.`);
             setUser(null);
         }
 
       } catch (error) {
-        console.warn("Warning fetching user profile data:", error);
+        console.error("Error fetching user profile data:", error);
         setUser(null);
       } finally {
         setPageLoading(false);
@@ -265,7 +273,13 @@ export default function UserProfilePage() {
       <div className="flex flex-1 flex-col">
         <DashboardHeader title="User Not Found" />
         <main className="flex-1 p-4 pt-6 md:p-8">
-          <p>The requested user could not be found. They may have been deleted.</p>
+          <div className="flex flex-col items-center justify-center space-y-4 py-12">
+            <p className="text-xl font-semibold">The requested user could not be found.</p>
+            <p className="text-muted-foreground">They may have been deleted or the ID is incorrect.</p>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/users">Back to User Accounts</Link>
+            </Button>
+          </div>
         </main>
       </div>
     );

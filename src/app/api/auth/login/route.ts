@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
       if (!retailersSnapshot.empty) {
         userDoc = retailersSnapshot.docs[0];
         foundCollection = 'Retailers';
+      } else {
+        // Final fallback to legacy 'users' collection
+        const usersSnapshot = await db.collection("users").where("mobileNumber", "==", mobileNumber).limit(1).get();
+        if (!usersSnapshot.empty) {
+          userDoc = usersSnapshot.docs[0];
+          foundCollection = 'users';
+        }
       }
     }
 
