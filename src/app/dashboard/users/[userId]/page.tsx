@@ -123,19 +123,13 @@ export default function UserProfilePage() {
     const fetchData = async () => {
       setPageLoading(true);
       try {
-        // Try Dealers first
+        // Search in Dealers collection
         let userDocRef = doc(db, "Dealers", userId);
         let userDoc = await getDoc(userDocRef);
         
-        // Try Retailers if not found
+        // If not found, search in Retailers collection
         if (!userDoc.exists()) {
            userDocRef = doc(db, "Retailers", userId);
-           userDoc = await getDoc(userDocRef);
-        }
-
-        // Final fallback to legacy 'users' collection
-        if (!userDoc.exists()) {
-           userDocRef = doc(db, "users", userId);
            userDoc = await getDoc(userDocRef);
         }
 
@@ -160,11 +154,11 @@ export default function UserProfilePage() {
 
           // Fetch transfers from subcollection
           const transfersQuery = query(collection(userDocRef, "transfers"), orderBy("date", "desc"));
-          const transfersSnapshot = await getDocs(transfersQuery).catch(() => ({ docs: [] })); // Handle missing index gracefully
+          const transfersSnapshot = await getDocs(transfersQuery).catch(() => ({ docs: [] }));
           setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
         } else {
-            console.warn(`User with ID ${userId} not found in any collection.`);
+            console.warn(`User with ID ${userId} not found in Dealers or Retailers collections.`);
             setUser(null);
         }
 
@@ -258,8 +252,8 @@ export default function UserProfilePage() {
         toast({ variant: "destructive", title: "Action Failed", description: result.error });
       } else {
         toast({ title: "Success", description: result.success });
-        setRefreshKey(prev => prev + 1); // Trigger refetch
-        setQuantity(""); // Reset controlled input
+        setRefreshKey(prev => prev + 1);
+        setQuantity("");
       }
     });
   };

@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/firebase-admin";
 import * as bcrypt from 'bcryptjs';
@@ -11,9 +10,9 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { mobileNumber, password } = await request.json();
+    const { mobileNumber, password, role = "Distributor" } = await request.json();
 
-    // 2. Validate mobileNumber
+    // 1. Validate mobileNumber
     const mobileRegex = /^\+?[1-9]\d{9,14}$/;
     if (!mobileRegex.test(mobileNumber)) {
       const res = NextResponse.json(
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(res, request);
     }
 
-    // 3. Validate password
+    // 2. Validate password
     if (!password || password.length < 8) {
       const res = NextResponse.json(
         { error: "Password must be at least 8 characters" },
@@ -32,9 +31,11 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(res, request);
     }
 
-    // 4. Check if user already exists in 'users' collection
-    const usersRef = db.collection("users");
-    const snapshot = await usersRef.where("mobileNumber", "==", mobileNumber).limit(1).get();
+    // 3. Determine collection
+    const collectionName = role === 'Retailer' ? 'Retailers' : 'Dealers';
+
+    // 4. Check if user already exists
+    const snapshot = await db.collection(collectionName).where("mobileNumber", "==", mobileNumber).limit(1).get();
 
     if (!snapshot.empty) {
       const res = NextResponse.json(
@@ -48,11 +49,14 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // 6. Create new user document
-    const docRef = await usersRef.add({
+    const docRef = await db.collection(collectionName).add({
       mobileNumber,
       hashedPassword: hashedPassword,
       createdAt: new Date().toISOString(),
       isVerified: true,
+      role: role,
+      codeBalance: 0,
+      status: "active"
     });
 
     // 7. Return success response
@@ -63,7 +67,6 @@ export async function POST(request: NextRequest) {
     return setCorsHeaders(response, request);
 
   } catch (error) {
-    // 8. Error handling
     console.error("Registration error:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     const res = NextResponse.json({ error: `An internal server error occurred: ${errorMessage}` }, { status: 500 });
