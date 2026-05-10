@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(res, request);
     }
 
-    const { mobileNumber, password } = await request.json();
+    const body = await request.json();
+    const mobileNumber = body.mobileNumber?.trim();
+    const password = body.password;
 
     if (!mobileNumber || !password) {
       const res = NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -61,8 +63,15 @@ export async function POST(request: NextRequest) {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
+    
+    // Fallback for plain-text passwords during migration/testing (NOT recommended for production)
+    // If you manually entered plain text passwords in Firestore, it will log a warning.
+    const isPlainTextMatch = password === user.hashedPassword;
+    if (!isPasswordValid && isPlainTextMatch) {
+      console.warn(`[WARNING] User ${mobileNumber} is using a plain-text password in Firestore! Please re-save their password to hash it.`);
+    }
 
-    if (!isPasswordValid) {
+    if (!isPasswordValid && !isPlainTextMatch) {
       const res = NextResponse.json({ error: "Invalid mobile number or password" }, { status: 401 });
       return setCorsHeaders(res, request);
     }
