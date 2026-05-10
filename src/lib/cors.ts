@@ -5,7 +5,9 @@ export function setCorsHeaders(response: NextResponse, request: NextRequest) {
   const origin = request.headers.get('origin') || ''
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim())
   
-  if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+  if (allowedOrigins.includes('*')) {
+    response.headers.set('Access-Control-Allow-Origin', '*')
+  } else if (origin && allowedOrigins.includes(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin)
   }
   
