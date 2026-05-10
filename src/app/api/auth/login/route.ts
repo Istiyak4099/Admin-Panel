@@ -11,6 +11,15 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!db) {
+      console.error("Firebase Admin SDK failed to initialize — check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY env vars");
+      const res = NextResponse.json(
+        { error: "Server configuration error. Authentication service unavailable." },
+        { status: 500 }
+      );
+      return setCorsHeaders(res, request);
+    }
+
     const { mobileNumber, password } = await request.json();
 
     if (!mobileNumber || !password) {
@@ -44,7 +53,10 @@ export async function POST(request: NextRequest) {
     const user = userDoc.data();
     
     if (!user.hashedPassword) {
-      const res = NextResponse.json({ error: "User account is not configured correctly." }, { status: 500 });
+      const res = NextResponse.json(
+        { error: "User account is not configured for password authentication. Please contact your administrator." },
+        { status: 403 }
+      );
       return setCorsHeaders(res, request);
     }
 
@@ -77,7 +89,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Login error:", error);
-    const res = NextResponse.json({ error: "An internal server error occurred" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    const res = NextResponse.json(
+      { error: `An internal server error occurred: ${errorMessage}` },
+      { status: 500 }
+    );
     return setCorsHeaders(res, request);
   }
 }
