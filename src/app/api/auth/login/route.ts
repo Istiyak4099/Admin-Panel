@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/firebase-admin";
+import { getAuth } from "firebase-admin/auth";
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { setCorsHeaders } from "@/lib/cors";
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = userDoc.data();
-    
+
     if (!user.hashedPassword) {
       const res = NextResponse.json(
         { error: "User account is not configured for password authentication. Please contact your administrator." },
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
-    
+
     // Fallback for plain-text passwords during migration/testing (NOT recommended for production)
     // If you manually entered plain text passwords in Firestore, it will log a warning.
     const isPlainTextMatch = password === user.hashedPassword;
@@ -77,21 +78,29 @@ export async function POST(request: NextRequest) {
     }
 
     const token = jwt.sign(
-      { 
-       userId: userDoc.id, 
-       mobileNumber: user.mobileNumber,
-       name: user.name,
-       role: user.role,
-       shopName: user.shopName,
-       dealerCode: user.dealerCode,
-       collection: foundCollection
-     },
-     process.env.JWT_SECRET!,
-     { expiresIn: "7d" }
+      {
+        userId: userDoc.id,
+        mobileNumber: user.mobileNumber,
+        name: user.name,
+        role: user.role,
+        shopName: user.shopName,
+        dealerCode: user.dealerCode,
+        collection: foundCollection
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
     );
 
+    // Generate a Firebase Custom Token so the frontend can bypass SMS OTP
+    let firebaseToken = "";
+    try {
+      firebaseToken = await getAuth().createCustomToken(userDoc.id);
+    } catch (authError) {
+      console.warn("Failed to generate Firebase Custom Token:", authError);
+    }
+
     const response = NextResponse.json(
-      { token, userId: userDoc.id, mobileNumber: user.mobileNumber, role: user.role },
+      { token, firebaseToken, userId: userDoc.id, mobileNumber: user.mobileNumber, role: user.role },
       { status: 200 }
     );
     return setCorsHeaders(response, request);
