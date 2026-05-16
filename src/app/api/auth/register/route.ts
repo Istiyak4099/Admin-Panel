@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       isVerified: true,
       role: role,
-      codeBalance: 0,
+      key_balance: 0,
       status: "active"
     });
 

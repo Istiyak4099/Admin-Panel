@@ -61,7 +61,7 @@ export type User = {
   /** A unique code assigned to a dealer. */
   dealerCode: string;
   /** The number of codes the user currently holds. */
-  codeBalance: number;
+  key_balance: number;
 };
 
 export type Payment = {

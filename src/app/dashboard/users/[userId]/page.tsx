@@ -349,13 +349,13 @@ export default function UserProfilePage() {
             <CardHeader>
                <CardTitle>
                 {actorProfile?.role === 'Admin'
-                  ? 'Generate & Manage Codes'
-                  : 'Code Management'}
+                  ? 'Generate & Manage Keys'
+                  : 'Key Management'}
               </CardTitle>
               <CardDescription>
                 {actorProfile?.role === 'Admin'
-                  ? 'Generate new codes by assigning them to this user.'
-                  : `Assign or retrieve codes. Your current balance: ${actorProfile?.codeBalance ?? 0}`}
+                  ? 'Generate new keys by assigning them to this user.'
+                  : `Assign or retrieve keys. Your current balance: ${actorProfile?.key_balance ?? 0}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -363,13 +363,13 @@ export default function UserProfilePage() {
                 <div className="flex cursor-pointer items-center space-x-4 rounded-md border p-4 transition-colors hover:bg-muted/50">
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user.name}'s Code Balance
+                      {user.name}'s Key Balance
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Total available codes this user holds. Click to view.
+                      Total available keys this user holds. Click to view.
                     </p>
                   </div>
-                  <p className="text-2xl font-bold">{user.codeBalance}</p>
+                  <p className="text-2xl font-bold">{user.key_balance ?? 0}</p>
                 </div>
               </CodeListDialog>
                 {!isSelf && (
@@ -404,8 +404,8 @@ export default function UserProfilePage() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Code Transfer History</CardTitle>
-                <CardDescription>Log of all code assignments and retrievals for this user.</CardDescription>
+                <CardTitle>Key Transfer History</CardTitle>
+                <CardDescription>Log of all key assignments and retrievals for this user.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -456,7 +456,7 @@ export default function UserProfilePage() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Shop Name</TableHead>
-                                <TableHead>Code Balance</TableHead>
+                                <TableHead>Key Balance</TableHead>
                                 <TableHead>
                                   <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -482,7 +482,7 @@ export default function UserProfilePage() {
                                     </TableCell>
                                     <TableCell>
                                       <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
-                                        {managedUser.codeBalance}
+                                        {managedUser.key_balance ?? 0}
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-right">

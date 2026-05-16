@@ -137,7 +137,7 @@ export default function UsersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="hidden sm:table-cell">Shop Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Codes</TableHead>
+                  <TableHead className="hidden md:table-cell">Keys</TableHead>
                   <TableHead>
                     <span className="sr-only">Actions</span>
                   </TableHead>
@@ -170,7 +170,7 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <Link href={`/dashboard/users/${user.uid}`} className="block">
-                          {user.codeBalance}
+                          {user.key_balance ?? 0}
                         </Link>
                       </TableCell>
                       <TableCell className="text-right">

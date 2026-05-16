@@ -56,10 +56,10 @@ export async function createUserAction(
             address: data.address,
             shopName: data.shopName,
             dealerCode: data.dealerCode,
-            codeBalance: 0,
+            key_balance: 0,
         };
 
-        // NEW LOGIC: Determine collection based on role
+        // Determine collection based on role
         const collectionName = data.role === 'Retailer' ? 'Retailers' : 'Dealers';
         await setDoc(doc(firestore, collectionName, userRecord.uid), newUser);
         
@@ -168,8 +168,8 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
             const transferDate = new Date().toISOString();
 
             if (actionType === 'assign') {
-                if (actorData.role !== 'Admin' && (actorData.codeBalance < quantity)) {
-                    throw new Error("Insufficient code balance to assign.");
+                if (actorData.role !== 'Admin' && (actorData.key_balance < quantity)) {
+                    throw new Error("Insufficient key balance to assign.");
                 }
                 
                 // If actor is Admin, generate new codes
@@ -202,9 +202,9 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 }
 
                 if (actorData.role !== 'Admin') {
-                    transaction.update(actorRef, { codeBalance: actorData.codeBalance - quantity });
+                    transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) - quantity });
                 }
-                transaction.update(targetRef, { codeBalance: targetData.codeBalance + quantity });
+                transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) + quantity });
 
                 const transferRef = doc(collection(targetRef, "transfers"));
                 transaction.set(transferRef, {
@@ -218,7 +218,7 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 });
 
             } else { // actionType is 'retrieve'
-                if (targetData.codeBalance < quantity) {
+                if ((targetData.key_balance || 0) < quantity) {
                     throw new Error("Target user has insufficient balance to retrieve.");
                 }
 
@@ -235,9 +235,9 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 await codesBatch.commit();
                 
                 if (actorData.role !== 'Admin') {
-                    transaction.update(actorRef, { codeBalance: actorData.codeBalance + quantity });
+                    transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) + quantity });
                 }
-                transaction.update(targetRef, { codeBalance: targetData.codeBalance - quantity });
+                transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) - quantity });
 
                 const transferRef = doc(collection(targetRef, "transfers"));
                 transaction.set(transferRef, {

@@ -131,9 +131,9 @@ export default function DashboardPage() {
               <KeyRound className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{currentUser?.codeBalance ?? 0}</div>}
+              {loading ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{currentUser?.key_balance ?? 0}</div>}
               <p className="text-xs text-muted-foreground">
-                Total codes you currently hold
+                Total keys you currently hold
               </p>
             </CardContent>
           </Card>

@@ -143,13 +143,13 @@ export default function ProfilePage() {
              <div className="flex items-center space-x-4 rounded-md border p-4">
                 <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">
-                    Your Code Balance
+                    Your Key Balance
                     </p>
                     <p className="text-sm text-muted-foreground">
-                    Total codes you currently hold.
+                    Total keys you currently hold.
                     </p>
                 </div>
-                <p className="text-2xl font-bold">{user.codeBalance}</p>
+                <p className="text-2xl font-bold">{user.key_balance ?? 0}</p>
             </div>
           </CardContent>
         </Card>
