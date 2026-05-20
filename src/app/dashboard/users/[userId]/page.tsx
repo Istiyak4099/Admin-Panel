@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -24,9 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, Trash2, LoaderCircle, Eye } from "lucide-react";
-import type { User, CodeTransfer, Customer, EmiDetail } from "@/lib/types";
+import type { User, CodeTransfer, Customer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
@@ -61,7 +61,6 @@ export default function DealerProfilePage() {
   const [actor, setActor] = useState<AuthUser | null>(null);
   const [managedDealers, setManagedDealers] = useState<User[]>([]);
   const [managedCustomers, setManagedCustomers] = useState<Customer[]>([]);
-  const [emiDetails, setEmiDetails] = useState<EmiDetail[]>([]);
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -87,15 +86,8 @@ export default function DealerProfilePage() {
 
           if (userData.role === 'Retailer') {
             const customersQuery = query(collection(db, "Customers"), where("created_by_uid", "==", userId));
-            const emiQuery = query(collection(db, "EmiDetails"), where("created_by_uid", "==", userId));
-            
-            const [customersSnap, emiSnap] = await Promise.all([
-                getDocs(customersQuery),
-                getDocs(emiQuery)
-            ]);
-
+            const customersSnap = await getDocs(customersQuery);
             setManagedCustomers(customersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as Customer)));
-            setEmiDetails(emiSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as EmiDetail)));
           } else {
             const dealersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
             const retailersQuery = query(collection(db, "Retailers"), where("createdByUid", "==", userId));
@@ -265,74 +257,43 @@ export default function DealerProfilePage() {
         {isRetailer ? (
            <Card>
            <CardHeader>
-             <CardTitle>Retailer Management</CardTitle>
+             <CardTitle>Customer Management</CardTitle>
              <CardDescription>
-               Managed customers and EMI records for {user.name}
+               List of all customers created by {user.name}
              </CardDescription>
            </CardHeader>
            <CardContent>
-             <Tabs defaultValue="customers">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-                    <TabsTrigger value="customers">Customers</TabsTrigger>
-                    <TabsTrigger value="emi">EMI Details</TabsTrigger>
-                </TabsList>
-                <TabsContent value="customers" className="space-y-4 pt-4">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Mobile</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {managedCustomers.length > 0 ? managedCustomers.map(customer => (
-                                <TableRow key={customer.uid}>
-                                    <TableCell className="font-medium">{customer.name}</TableCell>
-                                    <TableCell>{customer.mobileNumber}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            View Details
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )) : <TableRow><TableCell colSpan={3} className="text-center py-4">No customers found.</TableCell></TableRow>}
-                        </TableBody>
-                    </Table>
-                </TabsContent>
-                <TabsContent value="emi" className="space-y-4 pt-4">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Customer Name</TableHead>
-                                <TableHead>Mobile</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {emiDetails.length > 0 ? emiDetails.map(emi => (
-                                <TableRow key={emi.uid}>
-                                    <TableCell className="font-medium">{emi.customerName}</TableCell>
-                                    <TableCell>{emi.customerMobile}</TableCell>
-                                    <TableCell>{emi.totalAmount}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={emi.status === 'paid' ? 'default' : 'secondary'}>{emi.status}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            View Details
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )) : <TableRow><TableCell colSpan={5} className="text-center py-4">No EMI details found.</TableCell></TableRow>}
-                        </TableBody>
-                    </Table>
-                </TabsContent>
-             </Tabs>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Customer Name</TableHead>
+                          <TableHead>Mobile Number</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {managedCustomers.length > 0 ? managedCustomers.map(customer => (
+                          <TableRow key={customer.uid}>
+                              <TableCell className="font-medium">{customer.name}</TableCell>
+                              <TableCell>{customer.mobileNumber}</TableCell>
+                              <TableCell className="text-right">
+                                  <Button asChild variant="ghost" size="sm">
+                                      <Link href={`/dashboard/customers/${customer.uid}`}>
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View Details
+                                      </Link>
+                                  </Button>
+                              </TableCell>
+                          </TableRow>
+                      )) : (
+                          <TableRow>
+                              <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                                  No customers found for this retailer.
+                              </TableCell>
+                          </TableRow>
+                      )}
+                  </TableBody>
+              </Table>
            </CardContent>
          </Card>
         ) : (
