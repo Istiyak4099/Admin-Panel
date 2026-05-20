@@ -21,6 +21,17 @@ export type Customer = {
   createdAt: string;
 };
 
+export type EmiDetail = {
+  uid: string;
+  customerName: string;
+  customerMobile: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: string;
+  created_by_uid: string;
+  createdAt: string;
+};
+
 export type CodeTransfer = {
   id: string;
   from: string; // From User's name
