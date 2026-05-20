@@ -47,7 +47,7 @@ import { format } from "date-fns";
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
-export default function UserProfilePage() {
+export default function DealerProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
   const router = useRouter();

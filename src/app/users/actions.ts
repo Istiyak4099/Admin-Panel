@@ -179,6 +179,6 @@ export async function deleteUserAction({ userId }: { userId: string }) {
     return { error: result.message };
   } catch (error: any) {
     console.error("Error in deleteUserAction:", error);
-    return { error: error.message || "An unexpected error occurred during user deletion." };
+    return { error: error.message || "An unexpected error occurred during account deletion." };
   }
 }

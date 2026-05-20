@@ -5,11 +5,26 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize the app if it's not already initialized.
-if (admin.apps.length === 0) {
-  admin.initializeApp();
+function getAdminApp(): App {
+  if (getApps().length === 0) {
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
+      return initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey,
+        }),
+      });
+    }
+    // Fallback for environments with ADC (Application Default Credentials)
+    return initializeApp();
+  }
+  return getApps()[0];
 }
 
 const DeleteUserInputSchema = z.object({
@@ -36,8 +51,9 @@ const deleteUserFlow = ai.defineFlow(
   },
   async ({ userId }) => {
     try {
-      const auth = admin.auth();
-      const firestore = admin.firestore();
+      const app = getAdminApp();
+      const auth = getAuth(app);
+      const firestore = getFirestore(app);
 
       // 1. Delete user from Firebase Authentication
       await auth.deleteUser(userId);
@@ -57,10 +73,10 @@ const deleteUserFlow = ai.defineFlow(
           await retailersRef.delete();
       }
       
-      return { success: true, message: 'User deleted successfully.' };
+      return { success: true, message: 'Account deleted successfully.' };
     } catch (error: any) {
       console.error('Error in deleteUserFlow:', error);
-      throw new Error(error.message || 'An unexpected error occurred during user deletion.');
+      throw new Error(error.message || 'An unexpected error occurred during account deletion.');
     }
   }
 );
