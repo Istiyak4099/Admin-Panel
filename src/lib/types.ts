@@ -13,23 +13,27 @@ export type Locker = {
 
 export type Customer = {
   uid: string;
-  name: string;
-  mobileNumber: string;
-  email: string;
+  full_name: string;
+  mobile_number: string;
+  email_address: string;
   address: string;
   created_by_uid: string;
-  createdAt: string;
+  status: string;
+  android_id?: string;
+  latitude?: number;
+  longitude?: number;
+  last_location_update?: any;
 };
 
 export type EmiDetail = {
   uid: string;
-  customerName: string;
+  customerName?: string;
   customerMobile: string;
   totalAmount: number;
   paidAmount: number;
   status: string;
   created_by_uid: string;
-  createdAt: string;
+  createdAt?: string;
 };
 
 export type CodeTransfer = {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -274,8 +273,8 @@ export default function DealerProfilePage() {
                   <TableBody>
                       {managedCustomers.length > 0 ? managedCustomers.map(customer => (
                           <TableRow key={customer.uid}>
-                              <TableCell className="font-medium">{customer.name}</TableCell>
-                              <TableCell>{customer.mobileNumber}</TableCell>
+                              <TableCell className="font-medium">{customer.full_name}</TableCell>
+                              <TableCell>{customer.mobile_number}</TableCell>
                               <TableCell className="text-right">
                                   <Button asChild variant="ghost" size="sm">
                                       <Link href={`/dashboard/customers/${customer.uid}`}>
