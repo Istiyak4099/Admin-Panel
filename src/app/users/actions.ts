@@ -6,6 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import { getFirestore, doc, setDoc, getDoc, runTransaction, collection } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
+import { deleteUser } from '@/ai/flows/delete-user';
 
 const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
 
@@ -167,4 +168,17 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
         console.error(`Error managing key balance:`, error);
         return { error: error.message || "An unexpected error occurred." };
     }
+}
+
+export async function deleteUserAction({ userId }: { userId: string }) {
+  try {
+    const result = await deleteUser({ userId });
+    if (result.success) {
+      return { success: result.message };
+    }
+    return { error: result.message };
+  } catch (error: any) {
+    console.error("Error in deleteUserAction:", error);
+    return { error: error.message || "An unexpected error occurred during user deletion." };
+  }
 }

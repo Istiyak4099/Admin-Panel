@@ -24,12 +24,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, ChevronRight, Trash2, LoaderCircle, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, Trash2, LoaderCircle } from "lucide-react";
 import type { User, CodeTransfer, Customer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +58,6 @@ export default function UserProfilePage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [actor, setActor] = useState<AuthUser | null>(null);
-  const [actorProfile, setActorProfile] = useState<User | null>(null);
   const [managedDealers, setManagedDealers] = useState<User[]>([]);
   const [managedCustomers, setManagedCustomers] = useState<Customer[]>([]);
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
@@ -86,12 +84,10 @@ export default function UserProfilePage() {
           setUser(userData);
 
           if (userData.role === 'Retailer') {
-            // Fetch Customers for Retailer
             const customersQuery = query(collection(db, "Customers"), where("created_by_uid", "==", userId));
             const customersSnap = await getDocs(customersQuery);
             setManagedCustomers(customersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as Customer)));
           } else {
-            // Fetch managed Dealers/Retailers
             const dealersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
             const retailersQuery = query(collection(db, "Retailers"), where("createdByUid", "==", userId));
             
@@ -124,20 +120,9 @@ export default function UserProfilePage() {
   }, [userId, refreshKey]);
 
   useEffect(() => {
-    if (!auth || !db) return;
+    if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setActor(user);
-      if (user) {
-        let actorDocRef = doc(db, 'Dealers', user.uid);
-        let actorDoc = await getDoc(actorDocRef);
-        if (!actorDoc.exists()) {
-          actorDocRef = doc(db, 'Retailers', user.uid);
-          actorDoc = await getDoc(actorDocRef);
-        }
-        if (actorDoc.exists()) {
-          setActorProfile({ uid: user.uid, ...actorDoc.data() } as User);
-        }
-      }
     });
     return () => unsubscribe();
   }, []);
@@ -205,8 +190,9 @@ export default function UserProfilePage() {
               <CardFooter className="flex-col gap-2">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="w-full">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+                      <Button variant="destructive" className="w-full" disabled={deletePending}>
+                        {deletePending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                        Delete Account
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -216,7 +202,15 @@ export default function UserProfilePage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => startDeleteTransition(() => deleteUserAction({ userId }))}>Continue</AlertDialogAction>
+                        <AlertDialogAction onClick={() => startDeleteTransition(async () => {
+                          const res = await deleteUserAction({ userId });
+                          if (res.error) {
+                            toast({ variant: "destructive", title: "Deletion Failed", description: res.error });
+                          } else {
+                            toast({ title: "Account Deleted" });
+                            router.push('/dashboard/users');
+                          }
+                        })}>Continue</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -259,7 +253,6 @@ export default function UserProfilePage() {
           )}
         </div>
 
-        {/* Managed Entities Section */}
         <Card>
           <CardHeader>
             <CardTitle>{isRetailer ? 'Customers' : 'Managed Accounts'}</CardTitle>
@@ -309,7 +302,6 @@ export default function UserProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Transfer History */}
         <Card>
             <CardHeader>
                 <CardTitle>Transfer Logs</CardTitle>
@@ -327,7 +319,7 @@ export default function UserProfilePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {transfers.map(t => (
+                        {transfers.length > 0 ? transfers.map(t => (
                             <TableRow key={t.id}>
                                 <TableCell><Badge variant={t.type === 'assigned' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
                                 <TableCell>{t.from}</TableCell>
@@ -335,7 +327,7 @@ export default function UserProfilePage() {
                                 <TableCell>{t.quantity}</TableCell>
                                 <TableCell>{format(new Date(t.date), "MMM d, h:mm a")}</TableCell>
                             </TableRow>
-                        ))}
+                        )) : <TableRow><TableCell colSpan={5} className="text-center py-4">No transfer logs found.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </CardContent>
