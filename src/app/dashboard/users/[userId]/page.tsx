@@ -24,8 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, ChevronRight, Trash2, LoaderCircle } from "lucide-react";
-import type { User, CodeTransfer } from "@/lib/types";
+import { ArrowDown, ArrowUp, ChevronRight, Trash2, LoaderCircle, Users } from "lucide-react";
+import type { User, CodeTransfer, Customer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
@@ -44,56 +44,9 @@ import {
 import { deleteUserAction, manageCodeBalanceAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CodeListDialog } from "@/components/code-list-dialog";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
-
-function UserProfileSkeleton() {
-  return (
-    <div className="flex flex-1 flex-col">
-      <DashboardHeader title="Loading..." />
-      <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle><Skeleton className="h-7 w-32" /></CardTitle>
-              <CardDescription><Skeleton className="h-4 w-24" /></CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-5 w-40" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle><Skeleton className="h-7 w-48" /></CardTitle>
-              <CardDescription><Skeleton className="h-4 w-64" /></CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </CardContent>
-          </Card>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle><Skeleton className="h-7 w-52" /></CardTitle>
-            <CardDescription><Skeleton className="h-4 w-72" /></CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-      </main>
-    </div>
-  );
-}
-
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -107,27 +60,22 @@ export default function UserProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [actor, setActor] = useState<AuthUser | null>(null);
   const [actorProfile, setActorProfile] = useState<User | null>(null);
-  const [managedUsers, setManagedUsers] = useState<User[]>([]);
+  const [managedDealers, setManagedDealers] = useState<User[]>([]);
+  const [managedCustomers, setManagedCustomers] = useState<Customer[]>([]);
   const [transfers, setTransfers] = useState<CodeTransfer[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
-  const [authLoading, setAuthLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [quantity, setQuantity] = useState("");
 
   useEffect(() => {
-    if (!userId || !db) {
-      if (!userId) setPageLoading(false);
-      return;
-    }
+    if (!userId || !db) return;
 
     const fetchData = async () => {
       setPageLoading(true);
       try {
-        // Search in Dealers collection
         let userDocRef = doc(db, "Dealers", userId);
         let userDoc = await getDoc(userDocRef);
         
-        // If not found, search in Retailers collection
         if (!userDoc.exists()) {
            userDocRef = doc(db, "Retailers", userId);
            userDoc = await getDoc(userDocRef);
@@ -137,34 +85,36 @@ export default function UserProfilePage() {
           const userData = { ...userDoc.data(), uid: userDoc.id } as User;
           setUser(userData);
 
-          // Fetch users created by THIS user (check both Dealers and Retailers)
-          const dealersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
-          const retailersQuery = query(collection(db, "Retailers"), where("createdByUid", "==", userId));
-          
-          const [dealersSnap, retailersSnap] = await Promise.all([
-            getDocs(dealersQuery),
-            getDocs(retailersQuery)
-          ]);
-          
-          const managedList = [
-             ...dealersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)),
-             ...retailersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User))
-          ];
-          setManagedUsers(managedList);
+          if (userData.role === 'Retailer') {
+            // Fetch Customers for Retailer
+            const customersQuery = query(collection(db, "Customers"), where("created_by_uid", "==", userId));
+            const customersSnap = await getDocs(customersQuery);
+            setManagedCustomers(customersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as Customer)));
+          } else {
+            // Fetch managed Dealers/Retailers
+            const dealersQuery = query(collection(db, "Dealers"), where("createdByUid", "==", userId));
+            const retailersQuery = query(collection(db, "Retailers"), where("createdByUid", "==", userId));
+            
+            const [dealersSnap, retailersSnap] = await Promise.all([
+              getDocs(dealersQuery),
+              getDocs(retailersQuery)
+            ]);
+            
+            setManagedDealers([
+               ...dealersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)),
+               ...retailersSnap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User))
+            ]);
+          }
 
-          // Fetch transfers from subcollection
           const transfersQuery = query(collection(userDocRef, "transfers"), orderBy("date", "desc"));
           const transfersSnapshot = await getDocs(transfersQuery).catch(() => ({ docs: [] }));
           setTransfers(transfersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
 
         } else {
-            console.warn(`User with ID ${userId} not found in Dealers or Retailers collections.`);
             setUser(null);
         }
-
       } catch (error) {
-        console.error("Error fetching user profile data:", error);
-        setUser(null);
+        console.error("Error fetching data:", error);
       } finally {
         setPageLoading(false);
       }
@@ -174,70 +124,28 @@ export default function UserProfilePage() {
   }, [userId, refreshKey]);
 
   useEffect(() => {
-    if (!auth || !db) {
-      setAuthLoading(false);
-      return;
-    }
+    if (!auth || !db) return;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setActor(user);
       if (user) {
-        try {
-          // Check both collections for the actor profile
-          let actorDocRef = doc(db, 'Dealers', user.uid);
-          let actorDoc = await getDoc(actorDocRef);
-          
-          if (!actorDoc.exists()) {
-            actorDocRef = doc(db, 'Retailers', user.uid);
-            actorDoc = await getDoc(actorDocRef);
-          }
-
-          if (actorDoc.exists()) {
-            setActorProfile({ uid: user.uid, ...actorDoc.data() } as User);
-          } else {
-            setActorProfile(null);
-          }
-        } catch (error) {
-          console.warn("Warning fetching actor profile:", error);
-          setActorProfile(null);
+        let actorDocRef = doc(db, 'Dealers', user.uid);
+        let actorDoc = await getDoc(actorDocRef);
+        if (!actorDoc.exists()) {
+          actorDocRef = doc(db, 'Retailers', user.uid);
+          actorDoc = await getDoc(actorDocRef);
         }
-      } else {
-        setActorProfile(null);
+        if (actorDoc.exists()) {
+          setActorProfile({ uid: user.uid, ...actorDoc.data() } as User);
+        }
       }
-      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const handleDelete = () => {
-    startDeleteTransition(async () => {
-      const result = await deleteUserAction({ userId });
-      if (result.error) {
-        toast({
-          variant: "destructive",
-          title: "Error deleting user",
-          description: result.error,
-        });
-      } else {
-        toast({
-          title: "User deleted successfully",
-          description: `User ${user?.name} has been removed.`,
-        });
-        router.push("/dashboard/users");
-      }
-    });
-  };
-
   const handleCodeManagement = (formData: FormData) => {
-    if (!actor) {
-        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to perform this action.' });
-        return;
-    }
-
+    if (!actor) return;
     const quantityValue = Number(quantity);
-    if (isNaN(quantityValue) || quantityValue <= 0) {
-      toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid positive number.' });
-      return;
-    }
+    if (isNaN(quantityValue) || quantityValue <= 0) return;
     const actionType = formData.get('actionType') as 'assign' | 'retrieve';
     
     startCodeActionTransition(async () => {
@@ -258,28 +166,12 @@ export default function UserProfilePage() {
     });
   };
 
-  if (pageLoading || authLoading) {
-    return <UserProfileSkeleton />;
-  }
+  if (pageLoading) return <div className="flex h-screen items-center justify-center"><LoaderCircle className="animate-spin" /></div>;
 
-  if (!user) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <DashboardHeader title="User Not Found" />
-        <main className="flex-1 p-4 pt-6 md:p-8">
-          <div className="flex flex-col items-center justify-center space-y-4 py-12">
-            <p className="text-xl font-semibold">The requested user could not be found.</p>
-            <p className="text-muted-foreground">They may have been deleted or the ID is incorrect.</p>
-            <Button asChild variant="outline">
-              <Link href="/dashboard/users">Back to User Accounts</Link>
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  if (!user) return <div className="p-8 text-center">Account not found.</div>;
 
   const isSelf = actor?.uid === user.uid;
+  const isRetailer = user.role === 'Retailer';
 
   return (
     <div className="flex flex-1 flex-col">
@@ -288,25 +180,21 @@ export default function UserProfilePage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle>User Profile</CardTitle>
+              <CardTitle>{isRetailer ? 'Retailer' : 'Dealer'} Profile</CardTitle>
               <CardDescription>{user.role}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-md bg-primary/10 p-3">
+                <p className="text-sm font-medium">Key Balance</p>
+                <p className="text-2xl font-bold">{user.key_balance ?? 0}</p>
+              </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Shop Name</p>
                 <p>{user.shopName}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p>{user.email}</p>
-              </div>
-              <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Mobile</p>
                 <p>{user.mobileNumber}</p>
-              </div>
-               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Address</p>
-                <p>{user.address}</p>
               </div>
                <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Dealer Code</p>
@@ -314,98 +202,118 @@ export default function UserProfilePage() {
               </div>
             </CardContent>
             {!isSelf && (
-            <CardFooter className="flex-col items-start gap-2">
-                 <Button variant="outline" className="w-full">Reset Password</Button>
-                  <AlertDialog>
+              <CardFooter className="flex-col gap-2">
+                <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" className="w-full">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Account
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the user
-                          account and remove their data from our servers.
-                        </AlertDialogDescription>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>Permanent deletion of this account and all associated data.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deletePending}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={deletePending} className="bg-destructive hover:bg-destructive/90">
-                          {deletePending ? (
-                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          Continue
-                        </AlertDialogAction>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => startDeleteTransition(() => deleteUserAction({ userId }))}>Continue</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-            </CardFooter>
+              </CardFooter>
             )}
           </Card>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-               <CardTitle>
-                {actorProfile?.role === 'Admin'
-                  ? 'Generate & Manage Keys'
-                  : 'Key Management'}
-              </CardTitle>
-              <CardDescription>
-                {actorProfile?.role === 'Admin'
-                  ? 'Generate new keys by assigning them to this user.'
-                  : `Assign or retrieve keys. Your current balance: ${actorProfile?.key_balance ?? 0}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CodeListDialog userId={user.uid} userName={user.name}>
-                <div className="flex cursor-pointer items-center space-x-4 rounded-md border p-4 transition-colors hover:bg-muted/50">
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.name}'s Key Balance
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Total available keys this user holds. Click to view.
-                    </p>
-                  </div>
-                  <p className="text-2xl font-bold">{user.key_balance ?? 0}</p>
-                </div>
-              </CodeListDialog>
-                {!isSelf && (
-                 <form action={handleCodeManagement} className="mt-4 space-y-2">
-                  <Label htmlFor="code-quantity">Quantity</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      id="code-quantity" 
-                      name="quantity" 
-                      type="number" 
-                      placeholder="e.g., 100" 
-                      min="1" 
-                      required
-                      className="flex-1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                    />
-                    <Button type="submit" name="actionType" value="assign" disabled={codeActionPending || !quantity}>
-                      {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowDown />}
-                       <span className="hidden sm:inline ml-2">Assign</span>
-                    </Button>
-                    <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending || !quantity}>
-                      {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
-                       <span className="hidden sm:inline ml-2">Retrieve</span>
-                    </Button>
+          {!isSelf && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Transfer Keys</CardTitle>
+                <CardDescription>Adjust the numeric key balance for this account.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form action={handleCodeManagement} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="quantity" 
+                        type="number" 
+                        placeholder="0" 
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button type="submit" name="actionType" value="assign" disabled={codeActionPending}>
+                        {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowDown className="mr-2 h-4 w-4" />}
+                        Assign
+                      </Button>
+                      <Button type="submit" name="actionType" value="retrieve" variant="outline" disabled={codeActionPending}>
+                        {codeActionPending ? <LoaderCircle className="animate-spin" /> : <ArrowUp className="mr-2 h-4 w-4" />}
+                        Retrieve
+                      </Button>
+                    </div>
                   </div>
                 </form>
-                )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
+        {/* Managed Entities Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{isRetailer ? 'Customers' : 'Managed Accounts'}</CardTitle>
+            <CardDescription>
+              {isRetailer ? `Accounts created by Retailer ${user.name}` : `Dealers and Retailers created by ${user.name}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Mobile</TableHead>
+                  {!isRetailer && <TableHead>Role</TableHead>}
+                  {!isRetailer && <TableHead>Balance</TableHead>}
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isRetailer ? (
+                  managedCustomers.length > 0 ? managedCustomers.map(customer => (
+                    <TableRow key={customer.uid}>
+                      <TableCell className="font-medium">{customer.name}</TableCell>
+                      <TableCell>{customer.mobileNumber}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">View Details</Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : <TableRow><TableCell colSpan={3} className="text-center py-4">No customers found.</TableCell></TableRow>
+                ) : (
+                  managedDealers.length > 0 ? managedDealers.map(dealer => (
+                    <TableRow key={dealer.uid}>
+                      <TableCell className="font-medium">{dealer.name}</TableCell>
+                      <TableCell>{dealer.mobileNumber}</TableCell>
+                      <TableCell><Badge variant="outline">{dealer.role}</Badge></TableCell>
+                      <TableCell>{dealer.key_balance ?? 0}</TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/dashboard/users/${dealer.uid}`}>View Dealer</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : <TableRow><TableCell colSpan={5} className="text-center py-4">No managed accounts found.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Transfer History */}
         <Card>
             <CardHeader>
-                <CardTitle>Key Transfer History</CardTitle>
-                <CardDescription>Log of all key assignments and retrievals for this user.</CardDescription>
+                <CardTitle>Transfer Logs</CardTitle>
+                <CardDescription>Audit log of all balance changes.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -414,92 +322,24 @@ export default function UserProfilePage() {
                             <TableHead>Type</TableHead>
                             <TableHead>From</TableHead>
                             <TableHead>To</TableHead>
-                            <TableHead>Quantity</TableHead>
+                            <TableHead>Qty</TableHead>
                             <TableHead>Date</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {transfers.length > 0 ? (
-                            transfers.map((transfer: CodeTransfer) => (
-                                <TableRow key={transfer.id}>
-                                    <TableCell>
-                                        <Badge variant={transfer.type === 'assigned' ? 'default' : 'secondary'} className="capitalize">{transfer.type}</Badge>
-                                    </TableCell>
-                                    <TableCell>{transfer.from}</TableCell>
-                                    <TableCell>{transfer.to}</TableCell>
-                                    <TableCell>{transfer.quantity}</TableCell>
-                                    <TableCell>{format(new Date(transfer.date), "PPP p")}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
-                                    No transfer history found.
-                                 </TableCell>
+                        {transfers.map(t => (
+                            <TableRow key={t.id}>
+                                <TableCell><Badge variant={t.type === 'assigned' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
+                                <TableCell>{t.from}</TableCell>
+                                <TableCell>{t.to}</TableCell>
+                                <TableCell>{t.quantity}</TableCell>
+                                <TableCell>{format(new Date(t.date), "MMM d, h:mm a")}</TableCell>
                             </TableRow>
-                        )}
+                        ))}
                     </TableBody>
                 </Table>
             </CardContent>
         </Card>
-
-        {managedUsers.length > 0 && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Managed Users</CardTitle>
-                    <CardDescription>Users created and managed by {user.name}. Click a user to see their profile.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Shop Name</TableHead>
-                                <TableHead>Key Balance</TableHead>
-                                <TableHead>
-                                  <span className="sr-only">Actions</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {managedUsers.map((managedUser: User) => (
-                                <TableRow key={managedUser.uid} className="group hover:bg-muted/50">
-                                    <TableCell className="font-medium">
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block hover:underline">
-                                        {managedUser.name}
-                                      </Link>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
-                                        <Badge variant="outline">{managedUser.role}</Badge>
-                                      </Link>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
-                                        {managedUser.shopName}
-                                      </Link>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Link href={`/dashboard/users/${managedUser.uid}`} className="block">
-                                        {managedUser.key_balance ?? 0}
-                                      </Link>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <Button asChild variant="ghost" size="icon">
-                                        <Link href={`/dashboard/users/${managedUser.uid}`}>
-                                          <ChevronRight className="h-4 w-4" />
-                                          <span className="sr-only">View User</span>
-                                        </Link>
-                                      </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        )}
       </main>
     </div>
   );

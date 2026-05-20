@@ -11,13 +11,14 @@ export type Locker = {
   lastMaintenance: string;
 };
 
-export type GeneratedCode = {
-  id: string; // The document ID
-  code: string; // The unique code string
-  ownerUid: string; // The UID of the user who currently owns/holds the code
-  generatedByUid: string; // The UID of the admin who generated the code
-  generatedAt: string; // ISO date string
-  status: 'available' | 'used'; // 'available' for transfer, 'used' when activated in a device
+export type Customer = {
+  uid: string;
+  name: string;
+  mobileNumber: string;
+  email: string;
+  address: string;
+  created_by_uid: string;
+  createdAt: string;
 };
 
 export type CodeTransfer = {

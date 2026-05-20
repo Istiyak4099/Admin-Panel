@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from 'zod';
-import type { User, UserRole, GeneratedCode } from '@/lib/types';
+import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirestore, doc, setDoc, getDoc, writeBatch, runTransaction, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, runTransaction, collection } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 
@@ -46,7 +46,7 @@ export async function createUserAction(
             name: data.name,
             email: data.email,
             mobileNumber: data.mobileNumber,
-            password: data.password, // Storing plaintext password
+            password: data.password,
             hashedPassword: hashedPassword,
             role: data.role,
             createdAt: new Date().toISOString(),
@@ -59,64 +59,18 @@ export async function createUserAction(
             key_balance: 0,
         };
 
-        // Determine collection based on role
         const collectionName = data.role === 'Retailer' ? 'Retailers' : 'Dealers';
         await setDoc(doc(firestore, collectionName, userRecord.uid), newUser);
         
         return { user: { ...newUser, uid: userRecord.uid } };
 
     } catch (e: any) {
-        console.error("Error creating user:", e);
+        console.error("Error creating dealer:", e);
         if (e.code === 'auth/email-already-in-use') {
             return { error: "This email address is already in use by another account." };
         }
-        if (e.code === 'auth/phone-number-already-exists') {
-            return { error: "This phone number is already in use by another account." };
-        }
-        return { error: e.message || "An unexpected server error occurred while creating the user." };
+        return { error: e.message || "An unexpected server error occurred while creating the account." };
     }
-}
-
-
-const DeleteUserSchema = z.object({
-  userId: z.string(),
-});
-
-export interface DeleteUserState {
-  success?: boolean;
-  error?: string | null;
-}
-
-export async function deleteUserAction(data: z.infer<typeof DeleteUserSchema>): Promise<DeleteUserState> {
-  const validation = DeleteUserSchema.safeParse(data);
-  if (!validation.success) {
-    return { error: "Invalid data provided for deletion." };
-  }
-
-  const { userId } = validation.data;
-
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : 'http://localhost:9002';
-      
-    const response = await fetch(`${baseUrl}/api/delete-user`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'The deletion process failed.');
-    }
-
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error in deleteUserAction:', error);
-    return { error: error.message || 'An unexpected error occurred.' };
-  }
 }
 
 const ManageCodeBalanceSchema = z.object({
@@ -143,7 +97,6 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
 
     try {
         await runTransaction(db, async (transaction) => {
-            // Find actor ref by checking both collections
             let actorRef = doc(db, "Dealers", actorUid);
             let actorDoc = await transaction.get(actorRef);
             if (!actorDoc.exists()) {
@@ -151,7 +104,6 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 actorDoc = await transaction.get(actorRef);
             }
 
-            // Find target ref by checking both collections
             let targetRef = doc(db, "Dealers", targetUserId);
             let targetDoc = await transaction.get(targetRef);
             if (!targetDoc.exists()) {
@@ -160,7 +112,7 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
             }
 
             if (!actorDoc.exists() || !targetDoc.exists()) {
-                throw new Error("One or both users not found.");
+                throw new Error("One or both accounts not found.");
             }
 
             const actorData = actorDoc.data() as User;
@@ -172,35 +124,6 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                     throw new Error("Insufficient key balance to assign.");
                 }
                 
-                // If actor is Admin, generate new codes
-                if (actorData.role === 'Admin') {
-                    const codesBatch = writeBatch(db);
-                    for (let i = 0; i < quantity; i++) {
-                        const codeId = doc(collection(db, 'codes')).id;
-                        const newCode: Omit<GeneratedCode, 'id'> = {
-                            code: codeId.substring(0, 8).toUpperCase(),
-                            ownerUid: targetUserId,
-                            generatedByUid: actorUid,
-                            generatedAt: transferDate,
-                            status: 'available',
-                        };
-                        codesBatch.set(doc(db, 'codes', codeId), newCode);
-                    }
-                    await codesBatch.commit();
-                } else {
-                    // Transfer ownership of existing codes
-                    const codesQuery = query(collection(db, 'codes'), where('ownerUid', '==', actorUid), where('status', '==', 'available'), limit(quantity));
-                    const codesSnapshot = await getDocs(codesQuery);
-                    if (codesSnapshot.size < quantity) {
-                        throw new Error("Not enough available codes to transfer.");
-                    }
-                    const codesBatch = writeBatch(db);
-                    codesSnapshot.forEach(codeDoc => {
-                        codesBatch.update(codeDoc.ref, { ownerUid: targetUserId });
-                    });
-                    await codesBatch.commit();
-                }
-
                 if (actorData.role !== 'Admin') {
                     transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) - quantity });
                 }
@@ -217,22 +140,10 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                     date: transferDate
                 });
 
-            } else { // actionType is 'retrieve'
+            } else { // retrieve
                 if ((targetData.key_balance || 0) < quantity) {
-                    throw new Error("Target user has insufficient balance to retrieve.");
+                    throw new Error("Target account has insufficient balance to retrieve.");
                 }
-
-                // Transfer ownership of existing codes back
-                const codesQuery = query(collection(db, 'codes'), where('ownerUid', '==', targetUserId), where('status', '==', 'available'), limit(quantity));
-                const codesSnapshot = await getDocs(codesQuery);
-                 if (codesSnapshot.size < quantity) {
-                    throw new Error("Not enough available codes to retrieve.");
-                }
-                const codesBatch = writeBatch(db);
-                codesSnapshot.forEach(codeDoc => {
-                    codesBatch.update(codeDoc.ref, { ownerUid: actorUid });
-                });
-                await codesBatch.commit();
                 
                 if (actorData.role !== 'Admin') {
                     transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) + quantity });
@@ -251,9 +162,9 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 });
             }
         });
-        return { success: `Successfully ${actionType}ed ${quantity} codes.` };
+        return { success: `Successfully ${actionType}ed ${quantity} keys.` };
     } catch (error: any) {
-        console.error(`Error managing code balance:`, error);
-        return { error: error.message || "An unexpected server error occurred." };
+        console.error(`Error managing key balance:`, error);
+        return { error: error.message || "An unexpected error occurred." };
     }
 }

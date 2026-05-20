@@ -51,10 +51,6 @@ export default function UsersPage() {
     };
     const unsubscribe = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
-      if (!user) {
-        setLoading(false);
-        setManagedUsers([]);
-      }
     });
     return () => unsubscribe();
   }, []);
@@ -68,12 +64,8 @@ export default function UsersPage() {
     const fetchManagedUsers = async () => {
       setLoading(true);
       try {
-        // Fetch from BOTH collections
-        const dealersRef = collection(db, "Dealers");
-        const retailersRef = collection(db, "Retailers");
-        
-        const dq = query(dealersRef, where("createdByUid", "==", currentUser.uid));
-        const rq = query(retailersRef, where("createdByUid", "==", currentUser.uid));
+        const dq = query(collection(db, "Dealers"), where("createdByUid", "==", currentUser.uid));
+        const rq = query(collection(db, "Retailers"), where("createdByUid", "==", currentUser.uid));
         
         const [dealersSnap, retailersSnap] = await Promise.all([
           getDocs(dq),
@@ -85,7 +77,7 @@ export default function UsersPage() {
         
         setManagedUsers([...dealersList, ...retailersList]);
       } catch (error) {
-        console.error("Error fetching managed users: ", error);
+        console.error("Error fetching managed dealers: ", error);
       } finally {
         setLoading(false);
       }
@@ -96,28 +88,24 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <DashboardHeader title="User Accounts">
+      <DashboardHeader title="Dealer Accounts">
         <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Create User
+                Create Account
               </span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create a new user</DialogTitle>
-              <DialogDescription>
-                Add a new Dealer or Retailer account.
-              </DialogDescription>
+              <DialogTitle>Create Account</DialogTitle>
+              <DialogDescription>Add a new Dealer or Retailer.</DialogDescription>
             </DialogHeader>
             <CreateUserForm onSuccess={() => {
               setIsCreateUserOpen(false);
-              if (auth?.currentUser) {
-                setCurrentUser(auth?.currentUser);
-              }
+              setLoading(true);
             }} />
           </DialogContent>
         </Dialog>
@@ -125,10 +113,8 @@ export default function UsersPage() {
       <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
         <Card>
           <CardHeader>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>
-              Users you have created (Dealers & Retailers).
-            </CardDescription>
+            <CardTitle>Management</CardTitle>
+            <CardDescription>Dealers and Retailers you have created.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -138,57 +124,28 @@ export default function UsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead className="hidden sm:table-cell">Shop Name</TableHead>
                   <TableHead className="hidden md:table-cell">Keys</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      <LoaderCircle className="mx-auto h-6 w-6 animate-spin" />
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center"><LoaderCircle className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                 ) : managedUsers.length > 0 ? (
-                  managedUsers.map((user) => (
-                    <TableRow key={user.uid} className="group hover:bg-muted/50">
-                      <TableCell className="font-medium">
-                        <Link href={`/dashboard/users/${user.uid}`} className="block hover:underline">
-                          {user.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/dashboard/users/${user.uid}`} className="block">
-                          <Badge variant="outline">{user.role}</Badge>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Link href={`/dashboard/users/${user.uid}`} className="block">
-                          {user.shopName}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Link href={`/dashboard/users/${user.uid}`} className="block">
-                          {user.key_balance ?? 0}
-                        </Link>
-                      </TableCell>
+                  managedUsers.map((u) => (
+                    <TableRow key={u.uid}>
+                      <TableCell className="font-medium">{u.name}</TableCell>
+                      <TableCell><Badge variant="outline">{u.role}</Badge></TableCell>
+                      <TableCell className="hidden sm:table-cell">{u.shopName}</TableCell>
+                      <TableCell className="hidden md:table-cell">{u.key_balance ?? 0}</TableCell>
                       <TableCell className="text-right">
                         <Button asChild variant="ghost" size="icon">
-                          <Link href={`/dashboard/users/${user.uid}`}>
-                            <ChevronRight className="h-4 w-4" />
-                            <span className="sr-only">View User</span>
-                          </Link>
+                          <Link href={`/dashboard/users/${u.uid}`}><ChevronRight className="h-4 w-4" /></Link>
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      {currentUser ? "No users found under your management." : "Log in to see managed users."}
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8">No accounts found.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
