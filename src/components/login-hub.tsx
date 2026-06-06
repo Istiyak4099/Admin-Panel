@@ -20,14 +20,14 @@ export function LoginHub() {
             </Card>
         </Link>
         
-        <Link href="/credentials-login?role=Super" className="block transition-transform hover:scale-105">
+        <Link href="/credentials-login?role=Super%20Distributor" className="block transition-transform hover:scale-105">
              <Card className="border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 h-full">
                 <CardHeader className="text-center items-center p-6">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
                         <Users className="h-8 w-8" />
                     </div>
-                    <CardTitle className="pt-4">Super Login</CardTitle>
-                    <CardDescription>Super management access</CardDescription>
+                    <CardTitle className="pt-4">Super Distributor</CardTitle>
+                    <CardDescription>Master distributor management access</CardDescription>
                 </CardHeader>
             </Card>
         </Link>
@@ -39,7 +39,7 @@ export function LoginHub() {
                         <FileText className="h-8 w-8" />
                     </div>
                     <CardTitle className="pt-4">Distributor Login</CardTitle>
-                    <CardDescription>Distributor and retailer management</CardDescription>
+                    <CardDescription>Standard distributor management</CardDescription>
                 </CardHeader>
             </Card>
         </Link>
