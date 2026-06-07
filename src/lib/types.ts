@@ -29,13 +29,18 @@ export type Customer = {
 
 export type EmiDetail = {
   uid: string;
-  customerName?: string;
-  customerMobile: string;
-  totalAmount: number;
-  paidAmount: number;
-  status: string;
-  created_by_uid: string;
-  createdAt?: string;
+  customerId: string;
+  product_name: string;
+  price: number;
+  down_payment: number;
+  emi_monthly_amount: number;
+  number_of_emi: number;
+  processing_fee: number;
+  total_emi: number;
+  created_time: any; // Firestore Timestamp
+  live_photo?: string | null;
+  nid_front?: string | null;
+  nid_back?: string | null;
 };
 
 export type CodeTransfer = {
