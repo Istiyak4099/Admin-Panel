@@ -18,11 +18,13 @@ import {
   FileText,
   LifeBuoy,
   User,
+  UserPlus,
 } from "lucide-react";
 import { useSidebar } from "./ui/sidebar";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/dashboard/create-account", icon: UserPlus, label: "Create Account" },
   { href: "/dashboard/admins", icon: ShieldAlert, label: "Admins" },
   { href: "/dashboard/super-distributors", icon: Users, label: "Super Distributors" },
   { href: "/dashboard/distributors", icon: Briefcase, label: "Distributors" },

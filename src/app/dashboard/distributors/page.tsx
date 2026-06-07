@@ -7,7 +7,7 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, LoaderCircle } from "lucide-react";
+import { ChevronRight, LoaderCircle, UserPlus } from "lucide-react";
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import type { User } from "@/lib/types";
@@ -34,7 +34,16 @@ export default function DistributorsPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <DashboardHeader title="Distributors" />
+      <DashboardHeader title="Distributors">
+        <Button asChild size="sm" className="gap-1">
+          <Link href="/dashboard/create-account">
+            <UserPlus className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+              Create Account
+            </span>
+          </Link>
+        </Button>
+      </DashboardHeader>
       <main className="flex-1 p-4 md:p-8">
         <Card>
           <CardHeader>
@@ -54,7 +63,7 @@ export default function DistributorsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map(u => (
+                  {users.length > 0 ? users.map(u => (
                     <TableRow key={u.uid}>
                       <TableCell className="font-medium">{u.name}</TableCell>
                       <TableCell>{u.shopName}</TableCell>
@@ -66,7 +75,11 @@ export default function DistributorsPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">No Distributors found.</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             )}
