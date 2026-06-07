@@ -1,3 +1,4 @@
+
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/firebase-admin";
 import { getAuth } from "firebase-admin/auth";
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(res, request);
     }
 
-    // Generate a JWT for your own API tracking if needed
+    // Generate a JWT for standard API tracking if needed
     const token = jwt.sign(
       {
         userId: userDoc.id,
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
     // Generate a Firebase Custom Token so the Android app can log in natively
     let firebaseToken = "";
     try {
+      // getAuth() from firebase-admin/auth
       firebaseToken = await getAuth().createCustomToken(userDoc.id);
     } catch (authError) {
       console.error("Failed to generate Firebase Custom Token:", authError);
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
         mobileNumber: user.mobileNumber, 
         role: user.role,
         name: user.name,
-        uid: userDoc.id
+        uid: userDoc.id // Ensuring uid is returned for consistency
       },
       { status: 200 }
     );
