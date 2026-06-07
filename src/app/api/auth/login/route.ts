@@ -14,7 +14,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     if (!db) {
-      console.error("Firebase Admin SDK failed to initialize — check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY env vars");
+      console.error("Firebase Admin SDK failed to initialize");
       const res = NextResponse.json(
         { error: "Server configuration error. Authentication service unavailable." },
         { status: 500 }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(res, request);
     }
 
-    // Generate a JWT for standard API tracking if needed
+    // Generate a standard JWT for any non-Firebase SDK API calls
     const token = jwt.sign(
       {
         userId: userDoc.id,
@@ -84,10 +84,9 @@ export async function POST(request: NextRequest) {
       { expiresIn: "7d" }
     );
 
-    // Generate a Firebase Custom Token so the Android app can log in natively
+    // Generate a Firebase Custom Token (a specialized JWT) for the Android SDK
     let firebaseToken = "";
     try {
-      // getAuth() from firebase-admin/auth
       firebaseToken = await getAuth().createCustomToken(userDoc.id);
     } catch (authError) {
       console.error("Failed to generate Firebase Custom Token:", authError);
@@ -95,13 +94,13 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json(
       { 
-        token, 
-        firebaseToken, 
+        token, // Standard JWT
+        firebaseToken, // Firebase JWT for SDK
         userId: userDoc.id, 
         mobileNumber: user.mobileNumber, 
         role: user.role,
         name: user.name,
-        uid: userDoc.id // Ensuring uid is returned for consistency
+        uid: userDoc.id // Critical for Android app identification
       },
       { status: 200 }
     );
