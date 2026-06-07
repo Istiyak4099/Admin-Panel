@@ -7,16 +7,24 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { LoaderCircle, UserPlus, ChevronRight } from "lucide-react";
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { LoaderCircle, Plus, ChevronRight } from "lucide-react";
+import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import type { User } from "@/lib/types";
+import { ManagementFilters } from "@/components/management-filters";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
 export default function AdminsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creators, setCreators] = useState<Record<string, string>>({});
+
+  // Filters state
+  const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState("all");
 
   useEffect(() => {
     if (!db) return;
@@ -24,7 +32,18 @@ export default function AdminsPage() {
       try {
         const q = query(collection(db, "Dealers"), where("role", "==", "Admin"));
         const snap = await getDocs(q);
-        setUsers(snap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User)));
+        const userList = snap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
+        setUsers(userList);
+
+        // Fetch creator names
+        const creatorIds = Array.from(new Set(userList.map(u => u.createdByUid).filter(Boolean)));
+        const creatorMap: Record<string, string> = {};
+        for (const id of creatorIds) {
+          if (!id) continue;
+          const d = await getDoc(doc(db, "Dealers", id!));
+          if (d.exists()) creatorMap[id!] = d.data().name;
+        }
+        setCreators(creatorMap);
       } finally {
         setLoading(false);
       }
@@ -32,23 +51,36 @@ export default function AdminsPage() {
     fetchData();
   }, []);
 
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || 
+                          u.mobileNumber.includes(search);
+    const matchesStatus = status === 'all' || u.status === status;
+    const createdDate = new Date(u.createdAt);
+    const matchesFrom = !fromDate || createdDate >= new Date(fromDate);
+    const matchesTo = !toDate || createdDate <= new Date(toDate);
+    
+    return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+  });
+
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="System Administrators">
         <Button asChild size="sm" className="gap-1">
           <Link href="/dashboard/create-account">
-            <UserPlus className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-              Create Account
-            </span>
+            <Plus className="h-4 w-4" />
+            <span>Add New</span>
           </Link>
         </Button>
       </DashboardHeader>
-      <main className="flex-1 p-4 md:p-8">
+      <main className="flex-1 p-4 md:p-8 space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Admin Accounts</CardTitle>
-            <CardDescription>Full access accounts responsible for system-wide configuration.</CardDescription>
+            <ManagementFilters 
+              onSearchChange={setSearch}
+              onFromDateChange={setFromDate}
+              onToDateChange={setToDate}
+              onStatusChange={setStatus}
+            />
           </CardHeader>
           <CardContent>
             {loading ? <LoaderCircle className="mx-auto h-8 w-8 animate-spin" /> : (
@@ -56,17 +88,17 @@ export default function AdminsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Created By</TableHead>
                     <TableHead>Mobile</TableHead>
                     <TableHead>Balance</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.length > 0 ? users.map(u => (
+                  {filteredUsers.length > 0 ? filteredUsers.map(u => (
                     <TableRow key={u.uid}>
                       <TableCell className="font-medium">{u.name}</TableCell>
-                      <TableCell>{u.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{creators[u.createdByUid!] || 'System'}</TableCell>
                       <TableCell>{u.mobileNumber}</TableCell>
                       <TableCell>{u.key_balance ?? 0}</TableCell>
                       <TableCell className="text-right">

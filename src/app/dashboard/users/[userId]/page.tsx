@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -24,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, Trash2, LoaderCircle, Eye } from "lucide-react";
+import { ArrowDown, ArrowUp, Trash2, LoaderCircle, Eye, User as UserIcon } from "lucide-react";
 import type { User, CodeTransfer, Customer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
@@ -57,6 +58,7 @@ export default function DealerProfilePage() {
   const [codeActionPending, startCodeActionTransition] = useTransition();
 
   const [user, setUser] = useState<User | null>(null);
+  const [creatorName, setCreatorName] = useState<string>("System");
   const [actor, setActor] = useState<AuthUser | null>(null);
   const [managedDealers, setManagedDealers] = useState<User[]>([]);
   const [managedCustomers, setManagedCustomers] = useState<Customer[]>([]);
@@ -82,6 +84,14 @@ export default function DealerProfilePage() {
         if (userDoc.exists()) {
           const userData = { ...userDoc.data(), uid: userDoc.id } as User;
           setUser(userData);
+
+          // Fetch creator name
+          if (userData.createdByUid) {
+            const cDoc = await getDoc(doc(db, "Dealers", userData.createdByUid));
+            if (cDoc.exists()) {
+              setCreatorName(cDoc.data().name);
+            }
+          }
 
           if (userData.role === 'Retailer') {
             const customersQuery = query(collection(db, "Customers"), where("created_by_uid", "==", userId));
@@ -165,7 +175,10 @@ export default function DealerProfilePage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle>{isRetailer ? 'Retailer' : 'Dealer'} Profile</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon className="h-5 w-5 text-primary" />
+                {isRetailer ? 'Retailer' : 'Dealer'} Profile
+              </CardTitle>
               <CardDescription>{user.role}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -174,15 +187,19 @@ export default function DealerProfilePage() {
                 <p className="text-2xl font-bold">{user.key_balance ?? 0}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Shop Name</p>
+                <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Created By</p>
+                <p className="font-semibold">{creatorName}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Shop Name</p>
                 <p>{user.shopName}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Mobile</p>
+                <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Mobile</p>
                 <p>{user.mobileNumber}</p>
               </div>
                <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Dealer Code</p>
+                <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Dealer Code</p>
                 <p>{user.dealerCode}</p>
               </div>
             </CardContent>

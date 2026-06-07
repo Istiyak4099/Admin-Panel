@@ -27,6 +27,7 @@ export default function CustomerProfilePage() {
   const customerId = params.customerId as string;
 
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [creatorName, setCreatorName] = useState<string>("System");
   const [emiRecords, setEmiRecords] = useState<EmiDetail[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +37,6 @@ export default function CustomerProfilePage() {
     const fetchCustomerData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch Customer basic info
         const customerDoc = await getDoc(doc(db, "Customers", customerId));
         if (customerDoc.exists()) {
           const data = customerDoc.data();
@@ -56,7 +56,14 @@ export default function CustomerProfilePage() {
           };
           setCustomer(customerData);
 
-          // 2. Fetch EMI records linked by customerId as per screenshot
+          // Fetch creator (Retailer)
+          if (data.created_by_uid) {
+            const rDoc = await getDoc(doc(db, "Retailers", data.created_by_uid));
+            if (rDoc.exists()) {
+              setCreatorName(rDoc.data().name);
+            }
+          }
+
           const emiQuery = query(
             collection(db, "EmiDetails"),
             where("customerId", "==", customerId)
@@ -96,7 +103,6 @@ export default function CustomerProfilePage() {
       <DashboardHeader title={`Customer: ${customer.full_name}`} />
       <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Customer Info Card */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -107,8 +113,12 @@ export default function CustomerProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
+                <Label className="text-xs uppercase font-semibold text-muted-foreground">Created By</Label>
+                <p className="font-semibold text-primary">{creatorName}</p>
+              </div>
+              <div className="space-y-1">
                 <Label className="text-xs uppercase font-semibold text-muted-foreground">Full Name</Label>
-                <p className="font-medium text-base">{customer.full_name}</p>
+                <p className="font-bold text-lg">{customer.full_name}</p>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs uppercase font-semibold text-muted-foreground">Mobile Number</Label>
@@ -143,7 +153,6 @@ export default function CustomerProfilePage() {
             </CardContent>
           </Card>
 
-          {/* EMI Records Display */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -218,31 +227,6 @@ export default function CustomerProfilePage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Device Tracking / Location Card */}
-        {customer.last_location_update && (
-           <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold">Real-time Tracking</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="flex flex-wrap gap-8">
-                    <div className="space-y-1">
-                      <Label className="text-xs uppercase font-semibold text-muted-foreground">Last Known Location</Label>
-                      <p className="text-sm font-medium">
-                        {customer.latitude?.toFixed(5)}, {customer.longitude?.toFixed(5)}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs uppercase font-semibold text-muted-foreground">Last Updated</Label>
-                      <p className="text-sm font-medium">
-                        {format(customer.last_location_update.toDate(), "PPP p")}
-                      </p>
-                    </div>
-                  </div>
-              </CardContent>
-           </Card>
-        )}
       </main>
     </div>
   );
