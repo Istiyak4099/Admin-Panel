@@ -39,13 +39,16 @@ export async function createUserAction(
         const auth = getClientAuth(firebaseApp);
         const firestore = getFirestore(firebaseApp);
 
+        // 1. Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const userRecord = userCredential.user;
 
+        // 2. Hash password for Firestore storage (fallback/reference)
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
+        // 3. Prepare User object with explicit UID field
         const newUser: User = {
-            uid: userRecord.uid,
+            uid: userRecord.uid, // Explicit UID field
             name: data.name,
             email: data.email,
             mobileNumber: data.mobileNumber,
@@ -63,6 +66,8 @@ export async function createUserAction(
         };
 
         const collectionName = data.role === 'Retailer' ? 'Retailers' : 'Dealers';
+        
+        // 4. Save to Firestore using UID as document ID
         await setDoc(doc(firestore, collectionName, userRecord.uid), newUser);
         
         return { user: newUser };

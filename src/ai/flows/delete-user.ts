@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileoverview A flow for deleting a user from Firebase Authentication and Firestore.
@@ -10,7 +11,8 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
 function getAdminApp(): App {
-  if (getApps().length === 0) {
+  const apps = getApps();
+  if (apps.length === 0) {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
       return initializeApp({
@@ -24,7 +26,7 @@ function getAdminApp(): App {
     // Fallback for environments with ADC (Application Default Credentials)
     return initializeApp();
   }
-  return getApps()[0];
+  return apps[0];
 }
 
 const DeleteUserInputSchema = z.object({
