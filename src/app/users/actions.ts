@@ -1,3 +1,4 @@
+
 "use server";
 
 import { z } from 'zod';
@@ -8,7 +9,7 @@ import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'fireba
 import { firebaseApp } from '@/lib/firebase-client';
 import { deleteUser } from '@/ai/flows/delete-user';
 
-const userRoles: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
+const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
 const CreateUserSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -23,7 +24,7 @@ const CreateUserSchema = z.object({
 });
 
 export interface CreateUserState {
-  user?: Omit<User, 'hashedPassword'>;
+  user?: User;
   error?: string | null;
 }
 
@@ -43,13 +44,14 @@ export async function createUserAction(
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
-        const newUser: Omit<User, 'uid'> = {
+        const newUser: User = {
+            uid: userRecord.uid,
             name: data.name,
             email: data.email,
             mobileNumber: data.mobileNumber,
             password: data.password,
             hashedPassword: hashedPassword,
-            role: data.role,
+            role: data.role as UserRole,
             createdAt: new Date().toISOString(),
             lockerId: null,
             createdByUid: data.createdByUid ?? userRecord.uid,
@@ -63,7 +65,7 @@ export async function createUserAction(
         const collectionName = data.role === 'Retailer' ? 'Retailers' : 'Dealers';
         await setDoc(doc(firestore, collectionName, userRecord.uid), newUser);
         
-        return { user: { ...newUser, uid: userRecord.uid } };
+        return { user: newUser };
 
     } catch (e: any) {
         console.error("Error creating dealer:", e);
