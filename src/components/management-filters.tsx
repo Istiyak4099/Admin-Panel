@@ -4,8 +4,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search as SearchIcon, FileDown, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search as SearchIcon } from 'lucide-react';
 
 export interface HierarchyFilterConfig {
   label: string;
@@ -94,20 +93,6 @@ export function ManagementFilters({
             </Select>
           </div>
         ))}
-        
-        <div className="flex items-center gap-2 pb-1">
-          <Button className="bg-[#108548] hover:bg-[#0d6e3c] h-10 px-6 font-semibold">
-            Search
-          </Button>
-          <Button variant="destructive" className="bg-[#e54d5e] hover:bg-[#d43d4e] h-10 px-6 font-semibold">
-            <FileText className="mr-2 h-4 w-4" />
-            PDF
-          </Button>
-          <Button className="bg-[#00d0f5] hover:bg-[#00b9db] text-black h-10 px-6 font-semibold">
-            <FileDown className="mr-2 h-4 w-4" />
-            CSV
-          </Button>
-        </div>
       </div>
     </div>
   );
