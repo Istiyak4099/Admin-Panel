@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, LoaderCircle, Plus } from "lucide-react";
@@ -17,6 +16,7 @@ const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
 export default function DistributorsPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [supers, setSupers] = useState<{ label: string; value: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [creators, setCreators] = useState<Record<string, string>>({});
 
@@ -24,6 +24,7 @@ export default function DistributorsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState("all");
+  const [selectedSuper, setSelectedSuper] = useState("all");
 
   useEffect(() => {
     if (!db) return;
@@ -34,6 +35,7 @@ export default function DistributorsPage() {
         const userList = snap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
         setUsers(userList);
 
+        // Fetch creator names
         const creatorIds = Array.from(new Set(userList.map(u => u.createdByUid).filter(Boolean)));
         const creatorMap: Record<string, string> = {};
         for (const id of creatorIds) {
@@ -42,6 +44,11 @@ export default function DistributorsPage() {
           if (d.exists()) creatorMap[id!] = d.data().name;
         }
         setCreators(creatorMap);
+
+        // Fetch Super Distributors for filter
+        const superQ = query(collection(db, "Dealers"), where("role", "==", "Super Distributor"));
+        const superSnap = await getDocs(superQ);
+        setSupers(superSnap.docs.map(d => ({ label: d.data().name, value: d.id })));
       } finally {
         setLoading(false);
       }
@@ -53,10 +60,13 @@ export default function DistributorsPage() {
     const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || 
                           u.mobileNumber.includes(search);
     const matchesStatus = status === 'all' || u.status === status;
+    const matchesSuper = selectedSuper === 'all' || u.createdByUid === selectedSuper;
+    
     const createdDate = new Date(u.createdAt);
     const matchesFrom = !fromDate || createdDate >= new Date(fromDate);
     const matchesTo = !toDate || createdDate <= new Date(toDate);
-    return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+    
+    return matchesSearch && matchesStatus && matchesFrom && matchesTo && matchesSuper;
   });
 
   return (
@@ -77,6 +87,15 @@ export default function DistributorsPage() {
               onFromDateChange={setFromDate}
               onToDateChange={setToDate}
               onStatusChange={setStatus}
+              hierarchyFilters={[
+                {
+                  label: "Select Super Distributor",
+                  placeholder: "All Supers",
+                  options: supers,
+                  value: selectedSuper,
+                  onChange: setSelectedSuper
+                }
+              ]}
             />
           </CardHeader>
           <CardContent>
@@ -106,7 +125,7 @@ export default function DistributorsPage() {
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">No Distributors found.</TableCell>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No Distributors found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
