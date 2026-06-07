@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,7 +23,7 @@ import {
   KeyRound
 } from "lucide-react";
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
 import type { User, Customer } from "@/lib/types";
 
@@ -63,7 +62,7 @@ export default function DashboardPage() {
         }
         const myData = myDoc.data() as User;
 
-        // 2. Fetch all counts (MVP approach: fetching collections)
+        // 2. Fetch all counts
         const dealersSnap = await getDocs(collection(db, "Dealers"));
         const retailersSnap = await getDocs(collection(db, "Retailers"));
         const customersSnap = await getDocs(collection(db, "Customers"));
@@ -89,7 +88,7 @@ export default function DashboardPage() {
           retailers: retailers.length,
           customers: customers.length,
           todayDevices: todayCustomers.length,
-          todayLoans: todayCustomers.length, // Logic requested as same as devices
+          todayLoans: todayCustomers.length, 
           activeLoans: customers.filter(c => c.status !== 'removed').length,
           closedLoans: customers.filter(c => c.status === 'removed').length,
           myBalance: myData?.key_balance ?? 0
@@ -122,23 +121,23 @@ export default function DashboardPage() {
   ];
 
   const loanStats = [
-    { title: "Today Activated Devices", count: counts.todayDevices, icon: Smartphone, color: "text-purple-500" },
-    { title: "Today Activated Loans", count: counts.todayLoans, icon: CircleDollarSign, color: "text-pink-500" },
-    { title: "Active Loans", count: counts.activeLoans, icon: ClipboardList, color: "text-emerald-500" },
-    { title: "Closed Loans", count: counts.closedLoans, icon: CheckCircle2, color: "text-slate-500" },
+    { title: "Today Activated Devices", count: counts.todayDevices, icon: Smartphone, color: "text-purple-500", href: "/dashboard/customers" },
+    { title: "Today Activated Loans", count: counts.todayLoans, icon: CircleDollarSign, color: "text-pink-500", href: "/dashboard/customers" },
+    { title: "Active Loans", count: counts.activeLoans, icon: ClipboardList, color: "text-emerald-500", href: "/dashboard/customers" },
+    { title: "Closed Loans", count: counts.closedLoans, icon: CheckCircle2, color: "text-slate-500", href: "/dashboard/customers" },
   ];
 
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="System Dashboard" />
       <main className="flex-1 space-y-8 p-4 pt-6 md:p-8">
-        {/* Role & Management Cards (In Sidebar) */}
+        {/* Management Cards */}
         <div>
           <h2 className="mb-4 text-lg font-semibold tracking-tight">Management Overview</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {cardItems.map((item) => (
               <Link key={item.title} href={item.href}>
-                <Card className="transition-all hover:shadow-md hover:bg-muted/50 cursor-pointer">
+                <Card className="transition-all hover:shadow-md hover:bg-muted/50 cursor-pointer h-full">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
                     <item.icon className={`h-5 w-5 ${item.color}`} />
@@ -156,24 +155,26 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Loan & Device Stats (Dashboard Only) */}
+        {/* Loan & Device Stats */}
         <div>
           <h2 className="mb-4 text-lg font-semibold tracking-tight">Real-time Loan Tracking</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {loanStats.map((item) => (
-              <Card key={item.title}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
-                  <item.icon className={`h-5 w-5 ${item.color}`} />
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <LoaderCircle className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <div className="text-2xl font-bold">{item.count}</div>
-                  )}
-                </CardContent>
-              </Card>
+              <Link key={item.title} href={item.href}>
+                <Card className="transition-all hover:shadow-md hover:bg-muted/50 cursor-pointer h-full">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
+                    <item.icon className={`h-5 w-5 ${item.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <LoaderCircle className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <div className="text-2xl font-bold">{item.count}</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
