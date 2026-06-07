@@ -16,7 +16,8 @@ try {
         credential: cert(serviceAccount),
       });
     } else {
-      console.error("Firebase Admin SDK failed to initialize: Missing environment variables.");
+      console.warn("Firebase Admin SDK is initializing without explicit credentials. This is expected in Google Cloud/Vercel environments with ADC, but ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set if using a service account key.");
+      initializeApp();
     }
   }
 } catch (error) {
@@ -27,8 +28,7 @@ let db: FirebaseFirestore.Firestore;
 try {
   db = getFirestore();
 } catch (error) {
-  // If app wasn't initialized, getFirestore throws. We fallback to null 
-  // but cast as any to prevent TypeScript errors in files that import db.
+  console.error("Failed to get Firestore instance:", error);
   db = null as any;
 }
 

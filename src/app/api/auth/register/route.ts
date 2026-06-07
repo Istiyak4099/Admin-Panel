@@ -11,17 +11,17 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     if (!db) {
-       return NextResponse.json({ error: "Database not initialized" }, { status: 500 });
+       const res = NextResponse.json({ error: "Database not initialized" }, { status: 500 });
+       return setCorsHeaders(res, request);
     }
 
-    const { mobileNumber, password, role = "Retailer", name = "New User" } = await request.json();
+    const body = await request.json();
+    const { mobileNumber, password, role = "Retailer", name = "New User" } = body;
 
     if (!mobileNumber || !password) {
-        return NextResponse.json({ error: "Mobile number and password are required" }, { status: 400 });
+        const res = NextResponse.json({ error: "Mobile number and password are required" }, { status: 400 });
+        return setCorsHeaders(res, request);
     }
-
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Determine collection
     const collectionName = role === 'Retailer' ? 'Retailers' : 'Dealers';
@@ -30,13 +30,17 @@ export async function POST(request: NextRequest) {
     const snapshot = await db.collection(collectionName).where("mobileNumber", "==", mobileNumber).limit(1).get();
 
     if (!snapshot.empty) {
-      return NextResponse.json({ error: "Account already exists" }, { status: 409 });
+      const res = NextResponse.json({ error: "Account already exists" }, { status: 409 });
+      return setCorsHeaders(res, request);
     }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create new user document
     const docRef = db.collection(collectionName).doc();
     const newUser = {
-      uid: docRef.id, // Explicit UID field
+      uid: docRef.id, // Explicit UID field for Android app searching
       name: name,
       mobileNumber,
       hashedPassword: hashedPassword,

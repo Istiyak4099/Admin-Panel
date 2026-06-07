@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
         userId: userDoc.id, 
         mobileNumber: user.mobileNumber, 
         role: user.role,
-        name: user.name
+        name: user.name,
+        uid: userDoc.id
       },
       { status: 200 }
     );
