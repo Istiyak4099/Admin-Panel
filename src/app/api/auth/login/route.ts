@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (!user.hashedPassword) {
       const res = NextResponse.json(
-        { error: "User account is not configured for password authentication. Please contact your administrator." },
+        { error: "User account is not configured for password authentication." },
         { status: 403 }
       );
       return setCorsHeaders(res, request);
@@ -65,42 +65,41 @@ export async function POST(request: NextRequest) {
 
     const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
 
-    // Fallback for plain-text passwords during migration/testing (NOT recommended for production)
-    // If you manually entered plain text passwords in Firestore, it will log a warning.
-    const isPlainTextMatch = password === user.hashedPassword;
-    if (!isPasswordValid && isPlainTextMatch) {
-      console.warn(`[WARNING] User ${mobileNumber} is using a plain-text password in Firestore! Please re-save their password to hash it.`);
-    }
-
-    if (!isPasswordValid && !isPlainTextMatch) {
+    if (!isPasswordValid) {
       const res = NextResponse.json({ error: "Invalid mobile number or password" }, { status: 401 });
       return setCorsHeaders(res, request);
     }
 
+    // Generate a JWT for your own API tracking if needed
     const token = jwt.sign(
       {
         userId: userDoc.id,
         mobileNumber: user.mobileNumber,
         name: user.name,
         role: user.role,
-        shopName: user.shopName,
-        dealerCode: user.dealerCode,
         collection: foundCollection
       },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || "default_secret",
       { expiresIn: "7d" }
     );
 
-    // Generate a Firebase Custom Token so the frontend can bypass SMS OTP
+    // Generate a Firebase Custom Token so the Android app can log in natively
     let firebaseToken = "";
     try {
       firebaseToken = await getAuth().createCustomToken(userDoc.id);
     } catch (authError) {
-      console.warn("Failed to generate Firebase Custom Token:", authError);
+      console.error("Failed to generate Firebase Custom Token:", authError);
     }
 
     const response = NextResponse.json(
-      { token, firebaseToken, userId: userDoc.id, mobileNumber: user.mobileNumber, role: user.role },
+      { 
+        token, 
+        firebaseToken, 
+        userId: userDoc.id, 
+        mobileNumber: user.mobileNumber, 
+        role: user.role,
+        name: user.name
+      },
       { status: 200 }
     );
     return setCorsHeaders(response, request);

@@ -1,10 +1,9 @@
-
 "use server";
 
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirestore, doc, setDoc, getDoc, runTransaction, collection } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, runTransaction, collection } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { deleteUser } from '@/ai/flows/delete-user';
@@ -48,11 +47,11 @@ export async function createUserAction(
 
         // 3. Prepare User object with explicit UID field
         const newUser: User = {
-            uid: userRecord.uid, // Explicit UID field
+            uid: userRecord.uid, // Explicit UID field saved in document
             name: data.name,
             email: data.email,
             mobileNumber: data.mobileNumber,
-            password: data.password,
+            password: data.password, // Keep as reference for admin view
             hashedPassword: hashedPassword,
             role: data.role as UserRole,
             createdAt: new Date().toISOString(),
@@ -77,7 +76,7 @@ export async function createUserAction(
         if (e.code === 'auth/email-already-in-use') {
             return { error: "This email address is already in use by another account." };
         }
-        return { error: e.message || "An unexpected server error occurred while creating the account." };
+        return { error: e.message || "An unexpected server error occurred." };
     }
 }
 
