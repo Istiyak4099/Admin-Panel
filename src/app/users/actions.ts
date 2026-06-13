@@ -1,12 +1,32 @@
+
 "use server";
 
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirestore, doc, setDoc, runTransaction, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, runTransaction, collection, addDoc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { deleteUser } from '@/ai/flows/delete-user';
+
+// Import Admin SDK for server-side auth updates
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+
+function initAdmin() {
+    if (getApps().length === 0) {
+        const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+        if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
+            initializeApp({
+                credential: cert({
+                    projectId: process.env.FIREBASE_PROJECT_ID,
+                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                    privateKey,
+                }),
+            });
+        }
+    }
+}
 
 const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
@@ -233,4 +253,43 @@ export async function deleteUserAction({ userId }: { userId: string }) {
     console.error("Error in deleteUserAction:", error);
     return { error: error.message || "An unexpected error occurred during account deletion." };
   }
+}
+
+export async function updatePasswordAction(userId: string, newPassword: string) {
+    if (!firebaseApp) return { error: "Firebase not initialized." };
+    
+    try {
+        initAdmin();
+        const adminAuth = getAdminAuth();
+        const db = getFirestore(firebaseApp);
+
+        // 1. Update in Firebase Auth
+        await adminAuth.updateUser(userId, {
+            password: newPassword,
+        });
+
+        // 2. Hash for Firestore
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // 3. Update Firestore Document (Check both collections)
+        let userDocRef = doc(db, "Dealers", userId);
+        let userDoc = await getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+           userDocRef = doc(db, "Retailers", userId);
+           userDoc = await getDoc(userDocRef);
+        }
+
+        if (userDoc.exists()) {
+            await updateDoc(userDocRef, {
+                password: newPassword,
+                hashedPassword: hashedPassword
+            });
+        }
+
+        return { success: "Password updated successfully." };
+    } catch (error: any) {
+        console.error("Error updating password:", error);
+        return { error: error.message || "An unexpected error occurred." };
+    }
 }
