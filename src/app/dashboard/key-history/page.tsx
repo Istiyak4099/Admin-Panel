@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LoaderCircle, History, ArrowRightLeft, Search } from "lucide-react";
-import { getFirestore, collection, query, orderBy, limit, onSnapshot, where, or } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, limit, onSnapshot, where, or, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import type { CodeTransfer } from "@/lib/types";
@@ -30,8 +30,9 @@ export default function KeyHistoryPage() {
       if (user) {
         setCurrentUserUid(user.uid);
         // Check if user is Admin
-        const adminDoc = await getFirestore(firebaseApp).collection("Dealers").doc(user.uid).get();
-        if (adminDoc.exists && adminDoc.data().role === "Admin") {
+        const adminDocRef = doc(db, "Dealers", user.uid);
+        const adminDoc = await getDoc(adminDocRef);
+        if (adminDoc.exists() && adminDoc.data().role === "Admin") {
           setIsAdmin(true);
         }
       } else {
