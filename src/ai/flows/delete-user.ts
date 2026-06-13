@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileoverview A flow for deleting a user from Firebase Authentication and Firestore.
@@ -6,28 +5,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-
-function getAdminApp(): App {
-  const apps = getApps();
-  if (apps.length === 0) {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
-      return initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey,
-        }),
-      });
-    }
-    // Fallback for environments with ADC (Application Default Credentials)
-    return initializeApp();
-  }
-  return apps[0];
-}
+import { db as firestore, auth } from '@/lib/firebase-admin';
 
 const DeleteUserInputSchema = z.object({
   userId: z.string().min(1, 'User ID is required.'),
@@ -53,10 +31,6 @@ const deleteUserFlow = ai.defineFlow(
   },
   async ({ userId }) => {
     try {
-      const app = getAdminApp();
-      const auth = getAuth(app);
-      const firestore = getFirestore(app);
-
       // 1. Delete user from Firebase Authentication
       await auth.deleteUser(userId);
 
