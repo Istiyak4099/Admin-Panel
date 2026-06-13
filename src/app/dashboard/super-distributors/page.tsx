@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -50,8 +49,11 @@ export default function SuperDistributorsPage() {
   }, []);
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || 
-                          u.mobileNumber.includes(search);
+    const name = u.name || "";
+    const mobileNumber = u.mobileNumber || "";
+
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
+                          mobileNumber.includes(search);
     const matchesStatus = status === 'all' || u.status === status;
     const createdDate = new Date(u.createdAt);
     const matchesFrom = !fromDate || createdDate >= new Date(fromDate);

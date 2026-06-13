@@ -57,8 +57,11 @@ export default function DistributorsPage() {
   }, []);
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || 
-                          u.mobileNumber.includes(search);
+    const name = u.name || "";
+    const mobileNumber = u.mobileNumber || "";
+
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
+                          mobileNumber.includes(search);
     const matchesStatus = status === 'all' || u.status === status;
     const matchesSuper = selectedSuper === 'all' || u.createdByUid === selectedSuper;
     

@@ -74,8 +74,11 @@ export default function RetailersPage() {
   }, []);
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || 
-                          u.mobileNumber.includes(search);
+    const name = u.name || "";
+    const mobileNumber = u.mobileNumber || "";
+
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
+                          mobileNumber.includes(search);
     const matchesStatus = status === 'all' || u.status === status;
     const matchesDistributor = selectedDistributor === 'all' || u.createdByUid === selectedDistributor;
     const matchesSuper = selectedSuper === 'all' || distributorMap[u.createdByUid!] === selectedSuper;

@@ -84,8 +84,12 @@ export default function CustomersPage() {
   }, []);
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.full_name.toLowerCase().includes(search.toLowerCase()) || 
-                          u.mobile_number.includes(search);
+    // Safety check for search fields
+    const fullName = u.full_name || "";
+    const mobileNumber = u.mobile_number || "";
+
+    const matchesSearch = fullName.toLowerCase().includes(search.toLowerCase()) || 
+                          mobileNumber.includes(search);
     const matchesStatus = status === 'all' || u.status === status;
     
     // Hierarchy filters
