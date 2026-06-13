@@ -3,16 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { LoaderCircle, Plus, ChevronRight } from "lucide-react";
 import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import type { User } from "@/lib/types";
 import { ManagementFilters } from "@/components/management-filters";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
+const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 export default function AdminsPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -26,28 +28,46 @@ export default function AdminsPage() {
   const [status, setStatus] = useState("all");
 
   useEffect(() => {
-    if (!db) return;
-    const fetchData = async () => {
+    if (!db || !auth) return;
+
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (!authUser) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       try {
-        const q = query(collection(db, "Dealers"), where("role", "==", "Admin"));
+        // Only show admins created by the currently logged in user
+        const q = query(
+          collection(db, "Dealers"), 
+          where("role", "==", "Admin"),
+          where("createdByUid", "==", authUser.uid)
+        );
+        
         const snap = await getDocs(q);
         const userList = snap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
         setUsers(userList);
 
-        // Fetch creator names
+        // Fetch creator names (in this specific case, they will likely all be the current user)
         const creatorIds = Array.from(new Set(userList.map(u => u.createdByUid).filter(Boolean)));
         const creatorMap: Record<string, string> = {};
         for (const id of creatorIds) {
           if (!id) continue;
           const d = await getDoc(doc(db, "Dealers", id!));
-          if (d.exists()) creatorMap[id!] = d.data().name;
+          if (d.exists()) {
+            creatorMap[id!] = d.data().name;
+          }
         }
         setCreators(creatorMap);
+      } catch (error) {
+        console.error("Error fetching admins:", error);
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const filteredUsers = users.filter(u => {
@@ -57,9 +77,14 @@ export default function AdminsPage() {
     const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
                           mobileNumber.includes(search);
     const matchesStatus = status === 'all' || u.status === status;
-    const createdDate = new Date(u.createdAt);
-    const matchesFrom = !fromDate || createdDate >= new Date(fromDate);
-    const matchesTo = !toDate || createdDate <= new Date(toDate);
+    
+    let createdDate: Date | null = null;
+    if (u.createdAt) {
+      createdDate = new Date(u.createdAt);
+    }
+    
+    const matchesFrom = !fromDate || (createdDate && createdDate >= new Date(fromDate));
+    const matchesTo = !toDate || (createdDate && createdDate <= new Date(toDate));
     
     return matchesSearch && matchesStatus && matchesFrom && matchesTo;
   });
@@ -85,7 +110,7 @@ export default function AdminsPage() {
             />
           </CardHeader>
           <CardContent>
-            {loading ? <LoaderCircle className="mx-auto h-8 w-8 animate-spin" /> : (
+            {loading ? <div className="flex justify-center py-8"><LoaderCircle className="h-8 w-8 animate-spin" /></div> : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -111,7 +136,7 @@ export default function AdminsPage() {
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">No Admin accounts found.</TableCell>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No Admin accounts found created by you.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
