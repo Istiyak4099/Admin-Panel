@@ -6,13 +6,14 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LoaderCircle, History, ArrowRightLeft, Search } from "lucide-react";
+import { LoaderCircle, History, ArrowRightLeft, Search, AlertCircle } from "lucide-react";
 import { getFirestore, collection, query, orderBy, limit, onSnapshot, where, or, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import type { CodeTransfer } from "@/lib/types";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
@@ -23,17 +24,22 @@ export default function KeyHistoryPage() {
   const [search, setSearch] = useState("");
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth || !db) return;
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUserUid(user.uid);
-        // Check if user is Admin
-        const adminDocRef = doc(db, "Dealers", user.uid);
-        const adminDoc = await getDoc(adminDocRef);
-        if (adminDoc.exists() && adminDoc.data().role === "Admin") {
-          setIsAdmin(true);
+        try {
+          // Check if user is Admin in Dealers collection
+          const adminDocRef = doc(db, "Dealers", user.uid);
+          const adminDoc = await getDoc(adminDocRef);
+          if (adminDoc.exists() && adminDoc.data().role === "Admin") {
+            setIsAdmin(true);
+          }
+        } catch (e) {
+          console.warn("Failed to check admin status:", e);
         }
       } else {
         setCurrentUserUid(null);
@@ -46,48 +52,72 @@ export default function KeyHistoryPage() {
     if (!db || !currentUserUid) return;
 
     setLoading(true);
+    setError(null);
     let q;
     
-    // Admins see all history, others see only relevant history
-    if (isAdmin) {
-      q = query(
-        collection(db, "KeyHistory"),
-        orderBy("date", "desc"),
-        limit(100)
-      );
-    } else {
-      q = query(
-        collection(db, "KeyHistory"),
-        or(
-          where("fromUid", "==", currentUserUid),
-          where("toUid", "==", currentUserUid)
-        ),
-        orderBy("date", "desc"),
-        limit(100)
-      );
+    try {
+      // Admins see all history, others see only relevant history
+      if (isAdmin) {
+        q = query(
+          collection(db, "KeyHistory"),
+          orderBy("date", "desc"),
+          limit(100)
+        );
+      } else {
+        q = query(
+          collection(db, "KeyHistory"),
+          or(
+            where("fromUid", "==", currentUserUid),
+            where("toUid", "==", currentUserUid)
+          ),
+          orderBy("date", "desc"),
+          limit(100)
+        );
+      }
+
+      const unsub = onSnapshot(q, (snap) => {
+        setTransfers(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
+        setLoading(false);
+        setError(null);
+      }, (err) => {
+        console.error("Error fetching key history:", err);
+        // Handle missing index errors gracefully
+        if (err.message.includes("requires multiple indexes") || err.code === 'failed-precondition') {
+          setError("This view requires Firestore composite indexes. Please check the console for the creation link or manually add indexes for 'fromUid' (Asc) + 'date' (Desc) and 'toUid' (Asc) + 'date' (Desc).");
+        } else {
+          setError("Failed to sync transaction records. Please try again later.");
+        }
+        setLoading(false);
+      });
+
+      return unsub;
+    } catch (e: any) {
+      console.error("Query creation failed:", e);
+      setError("Failed to initialize transaction log query.");
+      setLoading(false);
     }
-
-    const unsub = onSnapshot(q, (snap) => {
-      setTransfers(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as CodeTransfer)));
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching key history:", error);
-      setLoading(false);
-    });
-
-    return unsub;
   }, [currentUserUid, isAdmin]);
 
   const filteredTransfers = transfers.filter(t => 
-    t.from.toLowerCase().includes(search.toLowerCase()) || 
-    t.to.toLowerCase().includes(search.toLowerCase()) ||
-    t.type.toLowerCase().includes(search.toLowerCase())
+    (t.from?.toLowerCase() || "").includes(search.toLowerCase()) || 
+    (t.to?.toLowerCase() || "").includes(search.toLowerCase()) ||
+    (t.type?.toLowerCase() || "").includes(search.toLowerCase())
   );
 
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="Key Transaction History" />
       <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Missing Firestore Indexes</AlertTitle>
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -149,7 +179,7 @@ export default function KeyHistoryPage() {
                         {t.quantity.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground text-xs">
-                        {format(new Date(t.date), "MMM d, yyyy · h:mm a")}
+                        {t.date ? format(new Date(t.date), "MMM d, yyyy · h:mm a") : "N/A"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -160,7 +190,7 @@ export default function KeyHistoryPage() {
                 <History className="h-12 w-12 text-muted-foreground/20 mb-4" />
                 <h3 className="text-lg font-semibold">No transactions found</h3>
                 <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                  There are no key transfer records matching your current filters or permissions.
+                  {error ? "There was an error loading data. Please follow the instructions in the alert above." : "There are no key transfer records matching your current filters or permissions."}
                 </p>
               </div>
             )}
