@@ -138,9 +138,8 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
             const destData = actionType === 'assign' ? targetData : actorData;
 
             // Check if Source has enough balance
-            // Admins are exempt from balance checks so the root account can seed keys,
-            // but their balance is still deducted (allowing it to go negative).
-            if (sourceData.role !== 'Admin' && (sourceData.key_balance || 0) < quantity) {
+            // Enforce balance check for all roles including Admin
+            if ((sourceData.key_balance || 0) < quantity) {
                 throw new Error(`${sourceData.name} has insufficient key balance.`);
             }
 
