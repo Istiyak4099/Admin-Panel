@@ -150,6 +150,16 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
             const targetData = targetDoc.data() as User;
             const transferDate = new Date().toISOString();
 
+            const historyPayload = {
+                type: actionType === 'assign' ? 'assigned' : 'retrieved',
+                from: actionType === 'assign' ? actorData.name : targetData.name,
+                to: actionType === 'assign' ? targetData.name : actorData.name,
+                fromUid: actionType === 'assign' ? actorUid : targetUserId,
+                toUid: actionType === 'assign' ? targetUserId : actorUid,
+                quantity,
+                date: transferDate
+            };
+
             if (actionType === 'assign') {
                 if (actorData.role !== 'Admin' && (actorData.key_balance < quantity)) {
                     throw new Error("Insufficient key balance to assign.");
@@ -160,17 +170,6 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 }
                 transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) + quantity });
 
-                const transferRef = doc(collection(targetRef, "transfers"));
-                transaction.set(transferRef, {
-                    type: 'assigned',
-                    from: actorData.name,
-                    to: targetData.name,
-                    fromUid: actorUid,
-                    toUid: targetUserId,
-                    quantity,
-                    date: transferDate
-                });
-
             } else { // retrieve
                 if ((targetData.key_balance || 0) < quantity) {
                     throw new Error("Target account has insufficient balance to retrieve.");
@@ -180,18 +179,15 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                     transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) + quantity });
                 }
                 transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) - quantity });
-
-                const transferRef = doc(collection(targetRef, "transfers"));
-                transaction.set(transferRef, {
-                    type: 'retrieved',
-                    from: targetData.name,
-                    to: actorData.name,
-                    fromUid: targetUserId,
-                    toUid: actorUid,
-                    quantity,
-                    date: transferDate
-                });
             }
+
+            // 1. Save to individual user's sub-collection
+            const transferRef = doc(collection(targetRef, "transfers"));
+            transaction.set(transferRef, historyPayload);
+
+            // 2. Save to global KeyHistory collection for global views
+            const globalHistoryRef = doc(collection(db, "KeyHistory"));
+            transaction.set(globalHistoryRef, historyPayload);
         });
         return { success: `Successfully ${actionType}ed ${quantity} keys.` };
     } catch (error: any) {
