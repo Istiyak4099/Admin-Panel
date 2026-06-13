@@ -1,4 +1,3 @@
-
 "use server";
 
 import { z } from 'zod';
@@ -207,6 +206,20 @@ export async function fulfillKeyRequestAction(requestId: string, actorUid: strin
         await updateDoc(doc(db, "KeyRequests", requestId), { status: "completed" });
     }
     return result;
+}
+
+export async function rejectKeyRequestAction(requestId: string, reason: string) {
+    if (!firebaseApp) return { error: "Firebase not initialized." };
+    const db = getFirestore(firebaseApp);
+    try {
+        await updateDoc(doc(db, "KeyRequests", requestId), {
+            status: "rejected",
+            rejectionReason: reason,
+        });
+        return { success: "Request rejected successfully." };
+    } catch (e: any) {
+        return { error: e.message || "Failed to reject request." };
+    }
 }
 
 export async function deleteUserAction({ userId }: { userId: string }) {

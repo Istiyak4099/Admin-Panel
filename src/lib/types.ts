@@ -1,4 +1,3 @@
-
 export type LockerStatus = "available" | "occupied" | "maintenance";
 export type PaymentStatus = "paid" | "pending" | "overdue";
 export type UserRole = "Admin" | "Super Distributor" | "Distributor" | "Retailer";
@@ -61,6 +60,7 @@ export type KeyRequest = {
   status: "pending" | "completed" | "rejected";
   timestamp: any;
   requesterName?: string;
+  rejectionReason?: string;
 };
 
 export type User = {

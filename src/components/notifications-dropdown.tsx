@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { Bell, LoaderCircle, CheckCircle2 } from 'lucide-react';
+import { Bell, LoaderCircle, CheckCircle2, XCircle, Check, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { firebaseApp } from '@/lib/firebase-client';
 import { getFirestore, collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { fulfillKeyRequestAction } from '@/app/users/actions';
+import { fulfillKeyRequestAction, rejectKeyRequestAction } from '@/app/users/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { KeyRequest } from '@/lib/types';
 import {
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
@@ -37,7 +37,9 @@ export function NotificationsDropdown() {
   const [requests, setRequests] = useState<KeyRequest[]>([]);
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<KeyRequest | null>(null);
+  const [rejectingRequest, setRejectingRequest] = useState<KeyRequest | null>(null);
   const [fulfillQty, setFulfillQty] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -94,6 +96,25 @@ export function NotificationsDropdown() {
     });
   };
 
+  const handleReject = () => {
+    if (!rejectingRequest) return;
+    if (!rejectionReason.trim()) {
+        toast({ variant: "destructive", title: "Missing Reason", description: "Please provide a reason for rejection." });
+        return;
+    }
+
+    startTransition(async () => {
+        const res = await rejectKeyRequestAction(rejectingRequest.uid, rejectionReason);
+        if (res.error) {
+            toast({ variant: "destructive", title: "Failed", description: res.error });
+        } else {
+            toast({ title: "Request Rejected" });
+            setRejectingRequest(null);
+            setRejectionReason('');
+        }
+    });
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -114,20 +135,39 @@ export function NotificationsDropdown() {
             <div className="p-4 text-center text-sm text-muted-foreground">No pending requests</div>
           ) : (
             requests.map((req) => (
-              <DropdownMenuItem
+              <div
                 key={req.uid}
-                className="flex flex-col items-start gap-1 p-3"
-                onSelect={() => {
-                    setSelectedRequest(req);
-                    setFulfillQty(req.quantity.toString());
-                }}
+                className="flex flex-col gap-2 p-3 hover:bg-accent/50 rounded-sm"
               >
                 <div className="flex w-full items-center justify-between">
                   <span className="font-semibold">{req.requesterName}</span>
                   <Badge variant="outline">{req.quantity} Keys</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">Click to assign keys</p>
-              </DropdownMenuItem>
+                <div className="flex items-center gap-2">
+                    <Button 
+                        size="sm" 
+                        className="flex-1 h-8 text-xs gap-1"
+                        onClick={() => {
+                            setSelectedRequest(req);
+                            setFulfillQty(req.quantity.toString());
+                        }}
+                    >
+                        <Check className="h-3 w-3" />
+                        Accept
+                    </Button>
+                    <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="flex-1 h-8 text-xs gap-1 text-destructive hover:text-destructive"
+                        onClick={() => {
+                            setRejectingRequest(req);
+                        }}
+                    >
+                        <X className="h-3 w-3" />
+                        Reject
+                    </Button>
+                </div>
+              </div>
             ))
           )}
         </DropdownMenuContent>
@@ -155,6 +195,32 @@ export function NotificationsDropdown() {
             <Button onClick={handleFulfill} disabled={isPending}>
                 {isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Send Keys
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rejectingRequest} onOpenChange={(open) => !open && setRejectingRequest(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Key Request</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting the request from {rejectingRequest?.requesterName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+             <Label htmlFor="reason">Reason</Label>
+             <Textarea 
+                id="reason" 
+                placeholder="Insufficient keys / Need more information..."
+                value={rejectionReason} 
+                onChange={(e) => setRejectionReason(e.target.value)} 
+             />
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" onClick={handleReject} disabled={isPending}>
+                {isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                Reject Request
             </Button>
           </DialogFooter>
         </DialogContent>
