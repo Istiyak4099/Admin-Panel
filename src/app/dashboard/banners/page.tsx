@@ -1,7 +1,5 @@
-
 "use client";
 
-import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -19,12 +17,9 @@ import {
     DialogTitle, 
     DialogTrigger 
 } from "@/components/ui/dialog";
-import { Upload, Info, ImagePlus } from "lucide-react";
-import placeholderImages from "@/app/lib/placeholder-images.json";
+import { Upload, Info, ImagePlus, ImageIcon } from "lucide-react";
 
 export default function BannersPage() {
-  const banner = placeholderImages.defaultBanner;
-
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="Mobile App Banners" />
@@ -54,15 +49,12 @@ export default function BannersPage() {
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <Info className="h-5 w-5 text-primary" />
-                                Premium Feature
+                                Paid Feature
                             </DialogTitle>
                             <DialogDescription className="pt-4 text-base">
-                                You need to upgrade to the paid plan to upload media and manage custom app banners.
+                                You need to upgrade to the paid plan to upload media to Firestore Database Storage.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="flex justify-end pt-4">
-                            <Button variant="default">View Pricing Plans</Button>
-                        </div>
                     </DialogContent>
                 </Dialog>
             </CardContent>
@@ -72,21 +64,13 @@ export default function BannersPage() {
             <CardHeader>
               <CardTitle>Current Banner</CardTitle>
                <CardDescription>
-                Preview of the default app banner.
+                Preview of the active app banner.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-md border">
-                <Image
-                  src={banner.url}
-                  alt={banner.alt}
-                  width={banner.width}
-                  height={banner.height}
-                  className="object-cover"
-                  data-ai-hint={banner.hint}
-                />
-              </div>
-              <div className="mt-4 p-3 bg-muted rounded-md">
+            <CardContent className="flex flex-col items-center justify-center py-10 border border-dashed rounded-md bg-muted/20">
+              <ImageIcon className="h-10 w-10 text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground font-medium">No Banner uploaded yet</p>
+              <div className="mt-6 w-full p-3 bg-muted rounded-md text-center">
                   <p className="text-xs font-medium text-muted-foreground uppercase">Status</p>
                   <p className="text-sm font-bold text-primary">System Default Active</p>
               </div>
