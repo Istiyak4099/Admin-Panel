@@ -1,3 +1,4 @@
+
 "use server";
 
 import { z } from 'zod';
@@ -104,6 +105,7 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
 
     try {
         await runTransaction(db, async (transaction) => {
+            // Find Actor (Manager performing action)
             let actorRef = doc(db, "Dealers", actorUid);
             let actorDoc = await transaction.get(actorRef);
             if (!actorDoc.exists()) {
@@ -111,6 +113,7 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 actorDoc = await transaction.get(actorRef);
             }
 
+            // Find Target (User receiving or giving keys)
             let targetRef = doc(db, "Dealers", targetUserId);
             let targetDoc = await transaction.get(targetRef);
             if (!targetDoc.exists()) {
@@ -126,40 +129,44 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
             const targetData = targetDoc.data() as User;
             const transferDate = new Date().toISOString();
 
+            // Determine Source and Destination based on actionType
+            // Assign: Actor -> Target (Keys moving from manager to subordinate)
+            // Retrieve: Target -> Actor (Keys moving from subordinate to manager)
+            const sourceRef = actionType === 'assign' ? actorRef : targetRef;
+            const sourceData = actionType === 'assign' ? actorData : targetData;
+            const destRef = actionType === 'assign' ? targetRef : actorRef;
+            const destData = actionType === 'assign' ? targetData : actorData;
+
+            // Check if Source has enough balance
+            // Admins are exempt from balance checks so the root account can seed keys,
+            // but their balance is still deducted (allowing it to go negative).
+            if (sourceData.role !== 'Admin' && (sourceData.key_balance || 0) < quantity) {
+                throw new Error(`${sourceData.name} has insufficient key balance.`);
+            }
+
+            // Calculate new balances
+            const newSourceBalance = (sourceData.key_balance || 0) - quantity;
+            const newDestBalance = (destData.key_balance || 0) + quantity;
+
+            // Perform updates
+            transaction.update(sourceRef, { key_balance: newSourceBalance });
+            transaction.update(destRef, { key_balance: newDestBalance });
+
             const historyPayload = {
                 type: actionType === 'assign' ? 'assigned' : 'retrieved',
-                from: actionType === 'assign' ? actorData.name : targetData.name,
-                to: actionType === 'assign' ? targetData.name : actorData.name,
+                from: sourceData.name,
+                to: destData.name,
                 fromUid: actionType === 'assign' ? actorUid : targetUserId,
                 toUid: actionType === 'assign' ? targetUserId : actorUid,
                 quantity,
                 date: transferDate
             };
 
-            if (actionType === 'assign') {
-                if (actorData.role !== 'Admin' && (actorData.key_balance < quantity)) {
-                    throw new Error("Insufficient key balance to assign.");
-                }
-                
-                if (actorData.role !== 'Admin') {
-                    transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) - quantity });
-                }
-                transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) + quantity });
-
-            } else {
-                if ((targetData.key_balance || 0) < quantity) {
-                    throw new Error("Target account has insufficient balance to retrieve.");
-                }
-                
-                if (actorData.role !== 'Admin') {
-                    transaction.update(actorRef, { key_balance: (actorData.key_balance || 0) + quantity });
-                }
-                transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) - quantity });
-            }
-
+            // Log history in target user's sub-collection
             const transferRef = doc(collection(targetRef, "transfers"));
             transaction.set(transferRef, historyPayload);
 
+            // Log in global history
             const globalHistoryRef = doc(collection(db, "KeyHistory"));
             transaction.set(globalHistoryRef, historyPayload);
         });
