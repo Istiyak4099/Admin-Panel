@@ -20,6 +20,7 @@ import {
   User,
   UserPlus,
   KeyRound,
+  ImagePlus,
 } from "lucide-react";
 import { useSidebar } from "./ui/sidebar";
 import { useEffect, useState } from "react";
@@ -39,6 +40,7 @@ const baseNavItems = [
   { href: "/dashboard/distributors", icon: Briefcase, label: "Distributors" },
   { href: "/dashboard/retailers", icon: Store, label: "Retailers" },
   { href: "/dashboard/customers", icon: UserCheck, label: "Customers" },
+  { href: "/dashboard/banners", icon: ImagePlus, label: "Banners" },
   { href: "/dashboard/profile", icon: User, label: "My Profile" },
   { href: "/dashboard/activity", icon: FileText, label: "Activity Logs" },
   { href: "/dashboard/support", icon: LifeBuoy, label: "Support Info" },
