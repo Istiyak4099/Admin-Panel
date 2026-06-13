@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import {
   Card,
@@ -9,28 +8,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
 import type { User } from "@/lib/types";
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Skeleton } from "@/components/ui/skeleton";
-import { KeyRound, LoaderCircle, Eye, EyeOff, CheckCircle2, Lock } from "lucide-react";
-import { updatePasswordAction } from "@/app/users/actions";
-import { useToast } from "@/hooks/use-toast";
+import { Eye, EyeOff, Lock } from "lucide-react";
 
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
@@ -75,21 +60,7 @@ function ProfilePageSkeleton() {
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  
-  // Password States
-  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
-  const [newPasswordInput, setNewPasswordInput] = useState("");
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  
-  // Visibility States
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [showSystemPassword, setShowSystemPassword] = useState(false);
-
-  const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (!auth || !db) {
@@ -124,47 +95,6 @@ export default function ProfilePage() {
     return () => unsubscribe();
   }, []);
 
-  const handleChangePassword = () => {
-    if (!user) return;
-    
-    if (!currentPasswordInput) {
-        toast({ variant: "destructive", title: "Error", description: "Please enter your current password." });
-        return;
-    }
-    
-    if (newPasswordInput.length < 6) {
-        toast({ variant: "destructive", title: "Error", description: "New password must be at least 6 characters." });
-        return;
-    }
-
-    if (newPasswordInput !== confirmPasswordInput) {
-        toast({ variant: "destructive", title: "Mismatch", description: "New passwords do not match." });
-        return;
-    }
-
-    startTransition(async () => {
-        const result = await updatePasswordAction(user.uid, currentPasswordInput, newPasswordInput);
-        if (result.error) {
-            toast({ variant: "destructive", title: "Update Failed", description: result.error });
-        } else {
-            toast({ title: "Success", description: result.success });
-            setIsChangePasswordOpen(false);
-            resetForm();
-            // Optimistic update of local user password display
-            setUser(prev => prev ? { ...prev, password: newPasswordInput } : null);
-        }
-    });
-  };
-
-  const resetForm = () => {
-    setCurrentPasswordInput("");
-    setNewPasswordInput("");
-    setConfirmPasswordInput("");
-    setShowCurrent(false);
-    setShowNew(false);
-    setShowConfirm(false);
-  };
-
   if (loading) {
     return <ProfilePageSkeleton />;
   }
@@ -191,96 +121,6 @@ export default function ProfilePage() {
                     <CardTitle>{user.name}</CardTitle>
                     <CardDescription>{user.role}</CardDescription>
                 </div>
-                <Dialog open={isChangePasswordOpen} onOpenChange={(open) => {
-                    setIsChangePasswordOpen(open);
-                    if (!open) resetForm();
-                }}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <KeyRound className="h-4 w-4" />
-                            Change Password
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Update Password</DialogTitle>
-                            <DialogDescription>
-                                Securely update your login credentials. You must provide your current password.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="current-password">Current Password</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="current-password"
-                                        type={showCurrent ? "text" : "password"}
-                                        placeholder="Verify your identity"
-                                        value={currentPasswordInput}
-                                        onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
-                                        onClick={() => setShowCurrent(!showCurrent)}
-                                    >
-                                        {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new-password">New Password</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="new-password"
-                                        type={showNew ? "text" : "password"}
-                                        placeholder="Min. 6 characters"
-                                        value={newPasswordInput}
-                                        onChange={(e) => setNewPasswordInput(e.target.value)}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
-                                        onClick={() => setShowNew(!showNew)}
-                                    >
-                                        {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="confirm-password"
-                                        type={showConfirm ? "text" : "password"}
-                                        placeholder="Repeat new password"
-                                        value={confirmPasswordInput}
-                                        onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
-                                        onClick={() => setShowConfirm(!showConfirm)}
-                                    >
-                                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button onClick={handleChangePassword} disabled={isPending}>
-                                {isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                                Update Password
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
