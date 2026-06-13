@@ -17,13 +17,17 @@ function initAdmin() {
     if (getApps().length === 0) {
         const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
         if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
-            initializeApp({
-                credential: cert({
-                    projectId: process.env.FIREBASE_PROJECT_ID,
-                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                    privateKey,
-                }),
-            });
+            try {
+                initializeApp({
+                    credential: cert({
+                        projectId: process.env.FIREBASE_PROJECT_ID,
+                        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                        privateKey,
+                    }),
+                });
+            } catch (err) {
+                console.error("Failed to initialize Admin SDK:", err);
+            }
         }
     }
 }
@@ -255,23 +259,13 @@ export async function deleteUserAction({ userId }: { userId: string }) {
   }
 }
 
-export async function updatePasswordAction(userId: string, newPassword: string) {
+export async function updatePasswordAction(userId: string, currentPassword: string, newPassword: string) {
     if (!firebaseApp) return { error: "Firebase not initialized." };
     
     try {
-        initAdmin();
-        const adminAuth = getAdminAuth();
         const db = getFirestore(firebaseApp);
-
-        // 1. Update in Firebase Auth
-        await adminAuth.updateUser(userId, {
-            password: newPassword,
-        });
-
-        // 2. Hash for Firestore
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        // 3. Update Firestore Document (Check both collections)
+        
+        // 1. Fetch the user document to verify current password
         let userDocRef = doc(db, "Dealers", userId);
         let userDoc = await getDoc(userDocRef);
         
@@ -280,16 +274,39 @@ export async function updatePasswordAction(userId: string, newPassword: string) 
            userDoc = await getDoc(userDocRef);
         }
 
-        if (userDoc.exists()) {
-            await updateDoc(userDocRef, {
-                password: newPassword,
-                hashedPassword: hashedPassword
-            });
+        if (!userDoc.exists()) {
+            return { error: "User profile not found." };
         }
+
+        const userData = userDoc.data() as User;
+
+        // 2. Verify current password
+        const isCurrentValid = await bcrypt.compare(currentPassword, userData.hashedPassword);
+        if (!isCurrentValid) {
+            return { error: "The current password you entered is incorrect." };
+        }
+
+        // 3. Initialize Admin SDK for authentication updates
+        initAdmin();
+        const adminAuth = getAdminAuth();
+
+        // 4. Update in Firebase Authentication
+        await adminAuth.updateUser(userId, {
+            password: newPassword,
+        });
+
+        // 5. Hash new password for Firestore
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        // 6. Update Firestore Document
+        await updateDoc(userDocRef, {
+            password: newPassword,
+            hashedPassword: hashedNewPassword
+        });
 
         return { success: "Password updated successfully." };
     } catch (error: any) {
         console.error("Error updating password:", error);
-        return { error: error.message || "An unexpected error occurred." };
+        return { error: error.message || "An unexpected error occurred during the password update." };
     }
 }

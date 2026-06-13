@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -55,7 +56,7 @@ function ProfilePageSkeleton() {
             </div>
              <div className="space-y-1">
                 <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-5 w-full max-w-sm" />
+                <Skeleton className="h-5 w-full max-sm" />
             </div>
             <div className="flex items-center space-x-4 rounded-md border p-4">
               <div className="flex-1 space-y-1">
@@ -75,9 +76,18 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  
+  // Password States
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  
+  // Visibility States
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showSystemPassword, setShowSystemPassword] = useState(false);
+
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -89,7 +99,6 @@ export default function ProfilePage() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         try {
-          // Check both collections
           let userDocRef = doc(db, 'Dealers', authUser.uid);
           let userDoc = await getDoc(userDocRef);
           
@@ -116,23 +125,44 @@ export default function ProfilePage() {
   }, []);
 
   const handleChangePassword = () => {
-    if (!user || !newPassword || newPassword.length < 6) {
-        toast({ variant: "destructive", title: "Error", description: "Password must be at least 6 characters." });
+    if (!user) return;
+    
+    if (!currentPasswordInput) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter your current password." });
+        return;
+    }
+    
+    if (newPasswordInput.length < 6) {
+        toast({ variant: "destructive", title: "Error", description: "New password must be at least 6 characters." });
+        return;
+    }
+
+    if (newPasswordInput !== confirmPasswordInput) {
+        toast({ variant: "destructive", title: "Mismatch", description: "New passwords do not match." });
         return;
     }
 
     startTransition(async () => {
-        const result = await updatePasswordAction(user.uid, newPassword);
+        const result = await updatePasswordAction(user.uid, currentPasswordInput, newPasswordInput);
         if (result.error) {
             toast({ variant: "destructive", title: "Update Failed", description: result.error });
         } else {
             toast({ title: "Success", description: result.success });
             setIsChangePasswordOpen(false);
-            setNewPassword("");
-            // Optimistic update of local user password
-            setUser(prev => prev ? { ...prev, password: newPassword } : null);
+            resetForm();
+            // Optimistic update of local user password display
+            setUser(prev => prev ? { ...prev, password: newPasswordInput } : null);
         }
     });
+  };
+
+  const resetForm = () => {
+    setCurrentPasswordInput("");
+    setNewPasswordInput("");
+    setConfirmPasswordInput("");
+    setShowCurrent(false);
+    setShowNew(false);
+    setShowConfirm(false);
   };
 
   if (loading) {
@@ -161,7 +191,10 @@ export default function ProfilePage() {
                     <CardTitle>{user.name}</CardTitle>
                     <CardDescription>{user.role}</CardDescription>
                 </div>
-                <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+                <Dialog open={isChangePasswordOpen} onOpenChange={(open) => {
+                    setIsChangePasswordOpen(open);
+                    if (!open) resetForm();
+                }}>
                     <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="gap-2">
                             <KeyRound className="h-4 w-4" />
@@ -172,28 +205,70 @@ export default function ProfilePage() {
                         <DialogHeader>
                             <DialogTitle>Update Password</DialogTitle>
                             <DialogDescription>
-                                Set a new password for your account. This will update your login credentials immediately.
+                                Securely update your login credentials. You must provide your current password.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="new-password">New Password</Label>
+                                <Label htmlFor="current-password">Current Password</Label>
                                 <div className="relative">
                                     <Input
-                                        id="new-password"
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Min. 6 characters"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        id="current-password"
+                                        type={showCurrent ? "text" : "password"}
+                                        placeholder="Verify your identity"
+                                        value={currentPasswordInput}
+                                        onChange={(e) => setCurrentPasswordInput(e.target.value)}
                                     />
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
                                         className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
-                                        onClick={() => setShowPassword(!showPassword)}
+                                        onClick={() => setShowCurrent(!showCurrent)}
                                     >
-                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="new-password">New Password</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="new-password"
+                                        type={showNew ? "text" : "password"}
+                                        placeholder="Min. 6 characters"
+                                        value={newPasswordInput}
+                                        onChange={(e) => setNewPasswordInput(e.target.value)}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
+                                        onClick={() => setShowNew(!showNew)}
+                                    >
+                                        {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="confirm-password"
+                                        type={showConfirm ? "text" : "password"}
+                                        placeholder="Repeat new password"
+                                        value={confirmPasswordInput}
+                                        onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
+                                        onClick={() => setShowConfirm(!showConfirm)}
+                                    >
+                                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>
                                 </div>
                             </div>
@@ -233,15 +308,15 @@ export default function ProfilePage() {
                     </p>
                     <div className="flex items-center gap-2">
                         <p className="font-semibold font-mono">
-                            {showCurrentPassword ? user.password : "••••••••"}
+                            {showSystemPassword ? user.password : "••••••••"}
                         </p>
                         <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-6 w-6" 
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            onClick={() => setShowSystemPassword(!showSystemPassword)}
                         >
-                            {showCurrentPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            {showSystemPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                         </Button>
                     </div>
                 </div>
