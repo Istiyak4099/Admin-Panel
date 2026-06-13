@@ -54,6 +54,15 @@ export type CodeTransfer = {
   type: "assigned" | "retrieved";
 };
 
+export type KeyRequest = {
+  uid: string;
+  retailerUid: string;
+  quantity: number;
+  status: "pending" | "completed" | "rejected";
+  timestamp: any;
+  requesterName?: string;
+};
+
 export type User = {
   /** The unique identifier from Firebase Authentication. */
   uid: string;

@@ -1,9 +1,10 @@
+
 "use server";
 
 import { z } from 'zod';
 import type { User, UserRole } from '@/lib/types';
 import * as bcrypt from 'bcryptjs';
-import { getFirestore, doc, setDoc, runTransaction, collection } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, runTransaction, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { deleteUser } from '@/ai/flows/delete-user';
@@ -174,6 +175,38 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
         console.error(`Error managing key balance:`, error);
         return { error: error.message || "An unexpected error occurred." };
     }
+}
+
+export async function requestKeysAction(retailerUid: string, quantity: number) {
+    if (!firebaseApp) return { error: "Firebase not initialized." };
+    const db = getFirestore(firebaseApp);
+    try {
+        await addDoc(collection(db, "KeyRequests"), {
+            retailerUid,
+            quantity,
+            status: "pending",
+            timestamp: serverTimestamp(),
+        });
+        return { success: "Key request submitted successfully." };
+    } catch (e: any) {
+        return { error: e.message || "Failed to submit request." };
+    }
+}
+
+export async function fulfillKeyRequestAction(requestId: string, actorUid: string, targetUserId: string, quantity: number) {
+    const result = await manageCodeBalanceAction({
+        targetUserId,
+        actorUid,
+        quantity,
+        actionType: 'assign'
+    });
+
+    if (result.success) {
+        if (!firebaseApp) return { error: "Firebase not initialized." };
+        const db = getFirestore(firebaseApp);
+        await updateDoc(doc(db, "KeyRequests", requestId), { status: "completed" });
+    }
+    return result;
 }
 
 export async function deleteUserAction({ userId }: { userId: string }) {
