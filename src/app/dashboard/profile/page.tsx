@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -28,7 +27,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { Skeleton } from "@/components/ui/skeleton";
-import { KeyRound, LoaderCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { KeyRound, LoaderCircle, Eye, EyeOff, CheckCircle2, Lock } from "lucide-react";
 import { updatePasswordAction } from "@/app/users/actions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,7 +46,7 @@ function ProfilePageSkeleton() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
-                {[...Array(4)].map((_, i) => (
+                {[...Array(5)].map((_, i) => (
                     <div key={i} className="space-y-1">
                         <Skeleton className="h-4 w-20" />
                         <Skeleton className="h-5 w-40" />
@@ -78,6 +77,7 @@ export default function ProfilePage() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -129,6 +129,8 @@ export default function ProfilePage() {
             toast({ title: "Success", description: result.success });
             setIsChangePasswordOpen(false);
             setNewPassword("");
+            // Optimistic update of local user password
+            setUser(prev => prev ? { ...prev, password: newPassword } : null);
         }
     });
   };
@@ -223,6 +225,25 @@ export default function ProfilePage() {
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Mobile</p>
                     <p className="font-semibold">{user.mobileNumber}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground uppercase text-xs flex items-center gap-1">
+                        <Lock className="h-3 w-3" />
+                        System Password
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-semibold font-mono">
+                            {showCurrentPassword ? user.password : "••••••••"}
+                        </p>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6" 
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        >
+                            {showCurrentPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </Button>
+                    </div>
                 </div>
             </div>
             <div className="space-y-1">

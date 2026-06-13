@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -25,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, Trash2, LoaderCircle, Eye, User as UserIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, Trash2, LoaderCircle, Eye, EyeOff, User as UserIcon, Lock } from "lucide-react";
 import type { User, CodeTransfer, Customer } from "@/lib/types";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
@@ -35,8 +34,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -66,6 +63,7 @@ export default function DealerProfilePage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [quantity, setQuantity] = useState("");
+  const [showUserPassword, setShowUserPassword] = useState(false);
 
   useEffect(() => {
     if (!userId || !db) return;
@@ -192,15 +190,34 @@ export default function DealerProfilePage() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Shop Name</p>
-                <p>{user.shopName}</p>
+                <p className="font-semibold">{user.shopName}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Mobile</p>
-                <p>{user.mobileNumber}</p>
+                <p className="font-semibold">{user.mobileNumber}</p>
               </div>
                <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground uppercase text-xs">Dealer Code</p>
-                <p>{user.dealerCode}</p>
+                <p className="font-semibold">{user.dealerCode}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground uppercase text-xs flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    System Password
+                </p>
+                <div className="flex items-center gap-2">
+                    <p className="font-semibold font-mono">
+                        {showUserPassword ? user.password : "••••••••"}
+                    </p>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6" 
+                        onClick={() => setShowUserPassword(!showUserPassword)}
+                    >
+                        {showUserPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    </Button>
+                </div>
               </div>
             </CardContent>
             {!isSelf && (
