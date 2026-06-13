@@ -20,8 +20,11 @@ import {
     DialogTrigger 
 } from "@/components/ui/dialog";
 import { Upload, Info, ImagePlus } from "lucide-react";
+import placeholderImages from "@/app/lib/placeholder-images.json";
 
 export default function BannersPage() {
+  const banner = placeholderImages.defaultBanner;
+
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="Mobile App Banners" />
@@ -75,11 +78,12 @@ export default function BannersPage() {
             <CardContent>
               <div className="relative aspect-[16/9] w-full overflow-hidden rounded-md border">
                 <Image
-                  src="https://picsum.photos/seed/banner1/600/337"
-                  alt="Default app banner"
-                  fill
+                  src={banner.url}
+                  alt={banner.alt}
+                  width={banner.width}
+                  height={banner.height}
                   className="object-cover"
-                  data-ai-hint="promotional banner"
+                  data-ai-hint={banner.hint}
                 />
               </div>
               <div className="mt-4 p-3 bg-muted rounded-md">

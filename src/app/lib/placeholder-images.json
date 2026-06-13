@@ -1,0 +1,10 @@
+
+{
+  "defaultBanner": {
+    "url": "https://picsum.photos/seed/banner1/600/337",
+    "width": 600,
+    "height": 337,
+    "alt": "Default app banner",
+    "hint": "promotional banner"
+  }
+}
