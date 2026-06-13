@@ -1,4 +1,3 @@
-
 "use server";
 
 import { z } from 'zod';
@@ -8,29 +7,7 @@ import { getFirestore, doc, setDoc, runTransaction, collection, addDoc, updateDo
 import { getAuth as getClientAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase-client';
 import { deleteUser } from '@/ai/flows/delete-user';
-
-// Import Admin SDK for server-side auth updates
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-
-function initAdmin() {
-    if (getApps().length === 0) {
-        const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-        if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
-            try {
-                initializeApp({
-                    credential: cert({
-                        projectId: process.env.FIREBASE_PROJECT_ID,
-                        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                        privateKey,
-                    }),
-                });
-            } catch (err) {
-                console.error("Failed to initialize Admin SDK:", err);
-            }
-        }
-    }
-}
+import { db as adminDb, auth as adminAuth } from "@/lib/firebase-admin";
 
 const userRoles: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
@@ -66,16 +43,16 @@ export async function createUserAction(
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const userRecord = userCredential.user;
 
-        // 2. Hash password for Firestore storage (fallback/reference)
+        // 2. Hash password for Firestore storage
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
-        // 3. Prepare User object with explicit UID field
+        // 3. Prepare User object
         const newUser: User = {
-            uid: userRecord.uid, // Explicit UID field saved in document
+            uid: userRecord.uid,
             name: data.name,
             email: data.email,
             mobileNumber: data.mobileNumber,
-            password: data.password, // Keep as reference for admin view
+            password: data.password,
             hashedPassword: hashedPassword,
             role: data.role as UserRole,
             createdAt: new Date().toISOString(),
@@ -90,7 +67,6 @@ export async function createUserAction(
 
         const collectionName = data.role === 'Retailer' ? 'Retailers' : 'Dealers';
         
-        // 4. Save to Firestore using UID as document ID
         await setDoc(doc(firestore, collectionName, userRecord.uid), newUser);
         
         return { user: newUser };
@@ -170,7 +146,7 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 }
                 transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) + quantity });
 
-            } else { // retrieve
+            } else {
                 if ((targetData.key_balance || 0) < quantity) {
                     throw new Error("Target account has insufficient balance to retrieve.");
                 }
@@ -181,11 +157,9 @@ export async function manageCodeBalanceAction(data: z.infer<typeof ManageCodeBal
                 transaction.update(targetRef, { key_balance: (targetData.key_balance || 0) - quantity });
             }
 
-            // 1. Save to individual user's sub-collection
             const transferRef = doc(collection(targetRef, "transfers"));
             transaction.set(transferRef, historyPayload);
 
-            // 2. Save to global KeyHistory collection for global views
             const globalHistoryRef = doc(collection(db, "KeyHistory"));
             transaction.set(globalHistoryRef, historyPayload);
         });
@@ -256,21 +230,19 @@ export async function deleteUserAction({ userId }: { userId: string }) {
 }
 
 export async function updatePasswordAction(userId: string, currentPassword: string, newPassword: string) {
-    if (!firebaseApp) return { error: "Firebase not initialized." };
-    
     try {
-        const db = getFirestore(firebaseApp);
-        
-        // 1. Fetch the user document to verify current password
-        let userDocRef = doc(db, "Dealers", userId);
-        let userDoc = await getDoc(userDocRef);
-        
-        if (!userDoc.exists()) {
-           userDocRef = doc(db, "Retailers", userId);
-           userDoc = await getDoc(userDocRef);
+        // 1. Fetch user to verify current password
+        const dealerDoc = await adminDb.collection("Dealers").doc(userId).get();
+        let userDoc = dealerDoc;
+        let collectionName = "Dealers";
+
+        if (!userDoc.exists) {
+            const retailerDoc = await adminDb.collection("Retailers").doc(userId).get();
+            userDoc = retailerDoc;
+            collectionName = "Retailers";
         }
 
-        if (!userDoc.exists()) {
+        if (!userDoc.exists) {
             return { error: "User profile not found." };
         }
 
@@ -282,20 +254,14 @@ export async function updatePasswordAction(userId: string, currentPassword: stri
             return { error: "The current password you entered is incorrect." };
         }
 
-        // 3. Initialize Admin SDK for authentication updates
-        initAdmin();
-        const adminAuth = getAdminAuth();
-
-        // 4. Update in Firebase Authentication
+        // 3. Update in Firebase Authentication
         await adminAuth.updateUser(userId, {
             password: newPassword,
         });
 
-        // 5. Hash new password for Firestore
+        // 4. Update in Firestore
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-        // 6. Update Firestore Document
-        await updateDoc(userDocRef, {
+        await adminDb.collection(collectionName).doc(userId).update({
             password: newPassword,
             hashedPassword: hashedNewPassword
         });
