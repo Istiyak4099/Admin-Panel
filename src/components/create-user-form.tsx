@@ -32,13 +32,13 @@ import { createUserAction } from '@/app/users/actions';
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
-const ALL_ROLES: UserRole[] = ["Admin", "Super", "Distributor", "Retailer"];
+const ALL_ROLES: UserRole[] = ["Admin", "Super Distributor", "Distributor", "Retailer"];
 
 const roleHierarchy: Record<UserRole, UserRole[]> = {
-  Admin: ["Admin", "Super", "Distributor", "Retailer"],
-  Super: ["Distributor", "Retailer"],
-  Distributor: ["Retailer"],
-  Retailer: [],
+  "Admin": ["Admin", "Super Distributor", "Distributor", "Retailer"],
+  "Super Distributor": ["Distributor", "Retailer"],
+  "Distributor": ["Retailer"],
+  "Retailer": [],
 };
 
 const CreateUserSchema = z.object({
@@ -55,7 +55,7 @@ const CreateUserSchema = z.object({
 type CreateUserFormValues = z.infer<typeof CreateUserSchema>;
 
 interface CreateUserFormProps {
-    onSuccess: () => void;
+    onSuccess: (role: UserRole) => void;
 }
 
 export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
@@ -75,13 +75,18 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
     const unsubscribe = onAuthStateChanged(auth, async (user: AuthUser | null) => {
       if (user) {
          try {
-          const userDocRef = doc(db, 'Dealers', user.uid);
-          const userDoc = await getDoc(userDocRef);
+          // Check both collections
+          let userDocRef = doc(db, 'Dealers', user.uid);
+          let userDoc = await getDoc(userDocRef);
+          
+          if (!userDoc.exists()) {
+             userDocRef = doc(db, 'Retailers', user.uid);
+             userDoc = await getDoc(userDocRef);
+          }
+
           if (userDoc.exists()) {
             setCurrentUser({ uid: user.uid, ...userDoc.data() } as User);
           } else {
-            // This might be the initial Admin user who doesn't have a Firestore doc yet
-            // or an unhandled case. For now, assume null profile.
             setCurrentUser(null);
           }
         } catch (error) {
@@ -103,7 +108,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       email: '',
       mobileNumber: '',
       password: '',
-      role: 'Distributor',
+      role: 'Retailer',
       shopName: '',
       address: '',
       dealerCode: '',
@@ -134,7 +139,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
                 title: 'User created successfully',
                 description: `User ${data.name} has been created.`,
             });
-            onSuccess();
+            onSuccess(data.role as UserRole);
             form.reset();
         }
     });

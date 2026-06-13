@@ -1,13 +1,32 @@
-
 "use client";
 
 import { DashboardHeader } from "@/components/dashboard-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CreateUserForm } from "@/components/create-user-form";
 import { useRouter } from "next/navigation";
+import type { UserRole } from "@/lib/types";
 
 export default function CreateAccountPage() {
   const router = useRouter();
+
+  const handleSuccess = (role: UserRole) => {
+    switch (role) {
+      case "Admin":
+        router.push("/dashboard/admins");
+        break;
+      case "Super Distributor":
+        router.push("/dashboard/super-distributors");
+        break;
+      case "Distributor":
+        router.push("/dashboard/distributors");
+        break;
+      case "Retailer":
+        router.push("/dashboard/retailers");
+        break;
+      default:
+        router.push("/dashboard/users");
+    }
+  };
 
   return (
     <div className="flex flex-1 flex-col">
@@ -21,7 +40,7 @@ export default function CreateAccountPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateUserForm onSuccess={() => router.push('/dashboard/users')} />
+            <CreateUserForm onSuccess={handleSuccess} />
           </CardContent>
         </Card>
       </main>

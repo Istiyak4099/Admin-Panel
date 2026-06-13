@@ -33,7 +33,8 @@ import { CreateUserForm } from "@/components/create-user-form";
 import { getAuth, onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase-client';
-import type { User } from "@/lib/types";
+import type { User, UserRole } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
@@ -43,6 +44,7 @@ export default function UsersPage() {
   const [managedUsers, setManagedUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (!auth) {
@@ -86,6 +88,28 @@ export default function UsersPage() {
     fetchManagedUsers();
   }, [currentUser]);
 
+  const handleCreateSuccess = (role: UserRole) => {
+    setIsCreateUserOpen(false);
+    // After creating from this page, we might want to stay here but refresh,
+    // or go to the specific page. Let's go to the specific page for consistency.
+    switch (role) {
+        case "Admin":
+          router.push("/dashboard/admins");
+          break;
+        case "Super Distributor":
+          router.push("/dashboard/super-distributors");
+          break;
+        case "Distributor":
+          router.push("/dashboard/distributors");
+          break;
+        case "Retailer":
+          router.push("/dashboard/retailers");
+          break;
+        default:
+          setLoading(true); // Just refresh if unknown
+      }
+  };
+
   return (
     <div className="flex flex-1 flex-col">
       <DashboardHeader title="Dealer Accounts">
@@ -103,10 +127,7 @@ export default function UsersPage() {
               <DialogTitle>Create Account</DialogTitle>
               <DialogDescription>Add a new Dealer or Retailer.</DialogDescription>
             </DialogHeader>
-            <CreateUserForm onSuccess={() => {
-              setIsCreateUserOpen(false);
-              setLoading(true);
-            }} />
+            <CreateUserForm onSuccess={handleCreateSuccess} />
           </DialogContent>
         </Dialog>
       </DashboardHeader>
